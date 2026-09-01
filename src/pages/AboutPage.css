@@ -1,0 +1,104 @@
+/* ========================================
+   About Page
+   ======================================== */
+
+.about {
+  padding-bottom: var(--space-20);
+}
+
+.about__section {
+  margin-bottom: var(--space-10);
+}
+
+.about__section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-5);
+  color: var(--text-primary);
+}
+
+.about__section-title svg {
+  color: var(--color-primary-500);
+  flex-shrink: 0;
+}
+
+/* Tech grid */
+.about__tech-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.about__tech-item {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-primary);
+  background: var(--surface-card);
+}
+
+.about__tech-item h4 {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-1);
+}
+
+.about__tech-item p {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+/* Status grid */
+.about__status-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-10);
+}
+
+@media (min-width: 768px) {
+  .about__status-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Checklist */
+.about__checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.about__checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  line-height: var(--line-height-relaxed);
+}
+
+.about__checklist-item--planned {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.about__check-icon {
+  color: var(--color-success);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.about__clock-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Links */
+.about__links {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}

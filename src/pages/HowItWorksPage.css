@@ -1,0 +1,120 @@
+/* ========================================
+   How It Works Page
+   ======================================== */
+
+.how-it-works {
+  padding-bottom: var(--space-20);
+}
+
+/* Notice */
+.hiw__notice {
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-200);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-10);
+  font-size: var(--font-size-sm);
+  color: var(--color-primary-800);
+  line-height: var(--line-height-relaxed);
+}
+
+[data-theme="dark"] .hiw__notice {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.2);
+  color: var(--color-primary-200);
+}
+
+/* Timeline */
+.hiw__timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.hiw__step {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.hiw__step-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 40px;
+}
+
+.hiw__step-number {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-600);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hiw__step-line {
+  width: 2px;
+  flex: 1;
+  background: var(--border-primary);
+  margin: var(--space-2) 0;
+  min-height: 24px;
+}
+
+.hiw__step-content {
+  display: flex;
+  gap: var(--space-4);
+  padding-bottom: var(--space-8);
+  flex: 1;
+}
+
+.hiw__step-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-tertiary);
+  color: var(--color-primary-500);
+  flex-shrink: 0;
+}
+
+.hiw__step-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hiw__step-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.hiw__step-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+/* CTA */
+.hiw__cta {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-8);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .hiw__step-content {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+}
