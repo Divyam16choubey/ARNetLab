@@ -17,21 +17,39 @@ const STYLE_NORMAL = {
   color: 0x38bdf8, // light cyan / sky blue
   opacity: 0.75,
   cylinderRadius: 0.0018, // 1.8mm slim 3D cylinder
+  emissive: 0x0284c7,
+  emissiveIntensity: 0.4,
 };
 
 const STYLE_ROUTE = {
   color: 0x10b981, // emerald green highlight
   opacity: 0.95,
   cylinderRadius: 0.0035, // thicker glowing route line
+  emissive: 0x10b981,
+  emissiveIntensity: 0.9,
+};
+
+const STYLE_ACTIVE_PACKET = {
+  color: 0xf59e0b, // bright amber gold for active traversing link
+  opacity: 1.0,
+  cylinderRadius: 0.0045, // slightly thicker pulse
+  emissive: 0xfbbf24,
+  emissiveIntensity: 1.3,
 };
 
 export class ConnectionManager {
   constructor() {
     /**
-     * Map<string, { group: THREE.Group, edge: Object, pos1: Object, pos2: Object, isHighlighted: boolean }>
+     * Map<string, { group: THREE.Group, edge: Object, pos1: Object, pos2: Object, isHighlighted: boolean, isPacketActive: boolean }>
      * edgeId -> connection visual entry
      */
     this._connections = new Map();
+
+    /** @type {Set<string>} Active route edge IDs */
+    this._routeEdgeIds = new Set();
+
+    /** @type {string|null} Currently active edge traversed by packet */
+    this._activePacketEdgeId = null;
 
     // Reusable temp vectors for orientation calculations
     this._v1 = new THREE.Vector3();
@@ -56,7 +74,11 @@ export class ConnectionManager {
       this.removeConnection(scene, edge.id);
     }
 
-    const group = this._createConnectionGroup(pos1, pos2, false);
+    const isRoute = this._routeEdgeIds.has(edge.id);
+    const isPacketActive = this._activePacketEdgeId === edge.id;
+    const mode = isPacketActive ? 'packet' : isRoute ? 'route' : 'normal';
+
+    const group = this._createConnectionGroup(pos1, pos2, mode);
     group.userData.edgeId = edge.id;
     group.userData.sourceId = edge.source;
     group.userData.targetId = edge.target;
@@ -68,7 +90,8 @@ export class ConnectionManager {
       edge,
       pos1: { ...pos1 },
       pos2: { ...pos2 },
-      isHighlighted: false,
+      isHighlighted: isRoute,
+      isPacketActive,
     });
   }
 
@@ -80,6 +103,11 @@ export class ConnectionManager {
   removeConnection(scene, edgeId) {
     const entry = this._connections.get(edgeId);
     if (!entry) return;
+
+    if (this._activePacketEdgeId === edgeId) {
+      this._activePacketEdgeId = null;
+    }
+    this._routeEdgeIds.delete(edgeId);
 
     if (scene && entry.group) {
       scene.remove(entry.group);
@@ -98,6 +126,8 @@ export class ConnectionManager {
       this.removeConnection(scene, edgeId);
     }
     this._connections.clear();
+    this._routeEdgeIds.clear();
+    this._activePacketEdgeId = null;
   }
 
   /**
@@ -108,28 +138,94 @@ export class ConnectionManager {
    * @param {string[]} routeEdgeIds - Array of edge IDs in the route
    */
   highlightRoute(scene, routeEdgeIds = []) {
-    const routeSet = new Set(routeEdgeIds);
+    this._routeEdgeIds = new Set(routeEdgeIds);
 
     for (const [edgeId, entry] of this._connections.entries()) {
-      const shouldHighlight = routeSet.has(edgeId);
+      const isRoute = this._routeEdgeIds.has(edgeId);
+      const isPacketActive = this._activePacketEdgeId === edgeId;
+      const targetMode = isPacketActive ? 'packet' : isRoute ? 'route' : 'normal';
 
-      if (entry.isHighlighted !== shouldHighlight) {
-        // Rebuild connection mesh with new style
+      const currentMode = entry.isPacketActive ? 'packet' : entry.isHighlighted ? 'route' : 'normal';
+
+      if (currentMode !== targetMode) {
         if (scene && entry.group) {
           scene.remove(entry.group);
           this._disposeGroup(entry.group);
         }
 
-        const newGroup = this._createConnectionGroup(entry.pos1, entry.pos2, shouldHighlight);
+        const newGroup = this._createConnectionGroup(entry.pos1, entry.pos2, targetMode);
         newGroup.userData.edgeId = edgeId;
         newGroup.userData.sourceId = entry.edge.source;
         newGroup.userData.targetId = entry.edge.target;
 
         scene.add(newGroup);
         entry.group = newGroup;
-        entry.isHighlighted = shouldHighlight;
+        entry.isHighlighted = isRoute;
+        entry.isPacketActive = isPacketActive;
       }
     }
+  }
+
+  /**
+   * Highlight the specific edge currently being traversed by the virtual packet.
+   *
+   * @param {THREE.Scene} scene
+   * @param {string|null} edgeId
+   */
+  setActivePacketEdge(scene, edgeId) {
+    if (this._activePacketEdgeId === edgeId) return;
+
+    const prevEdgeId = this._activePacketEdgeId;
+    this._activePacketEdgeId = edgeId;
+
+    // Restore previous active edge to its route or normal state
+    if (prevEdgeId && this._connections.has(prevEdgeId)) {
+      const prevEntry = this._connections.get(prevEdgeId);
+      const targetMode = this._routeEdgeIds.has(prevEdgeId) ? 'route' : 'normal';
+
+      if (scene && prevEntry.group) {
+        scene.remove(prevEntry.group);
+        this._disposeGroup(prevEntry.group);
+      }
+
+      const restoredGroup = this._createConnectionGroup(prevEntry.pos1, prevEntry.pos2, targetMode);
+      restoredGroup.userData.edgeId = prevEdgeId;
+      restoredGroup.userData.sourceId = prevEntry.edge.source;
+      restoredGroup.userData.targetId = prevEntry.edge.target;
+
+      scene.add(restoredGroup);
+      prevEntry.group = restoredGroup;
+      prevEntry.isHighlighted = this._routeEdgeIds.has(prevEdgeId);
+      prevEntry.isPacketActive = false;
+    }
+
+    // Set new active packet edge
+    if (edgeId && this._connections.has(edgeId)) {
+      const entry = this._connections.get(edgeId);
+
+      if (scene && entry.group) {
+        scene.remove(entry.group);
+        this._disposeGroup(entry.group);
+      }
+
+      const activeGroup = this._createConnectionGroup(entry.pos1, entry.pos2, 'packet');
+      activeGroup.userData.edgeId = edgeId;
+      activeGroup.userData.sourceId = entry.edge.source;
+      activeGroup.userData.targetId = entry.edge.target;
+
+      scene.add(activeGroup);
+      entry.group = activeGroup;
+      entry.isHighlighted = this._routeEdgeIds.has(edgeId);
+      entry.isPacketActive = true;
+    }
+  }
+
+  /**
+   * Clear the active packet traversing edge highlight, returning it to route/normal style.
+   * @param {THREE.Scene} scene
+   */
+  clearActivePacketEdge(scene) {
+    this.setActivePacketEdge(scene, null);
   }
 
   /**
@@ -137,14 +233,17 @@ export class ConnectionManager {
    * @param {THREE.Scene} scene
    */
   clearRouteHighlights(scene) {
+    this._routeEdgeIds.clear();
+    this._activePacketEdgeId = null;
+
     for (const [edgeId, entry] of this._connections.entries()) {
-      if (entry.isHighlighted) {
+      if (entry.isHighlighted || entry.isPacketActive) {
         if (scene && entry.group) {
           scene.remove(entry.group);
           this._disposeGroup(entry.group);
         }
 
-        const newGroup = this._createConnectionGroup(entry.pos1, entry.pos2, false);
+        const newGroup = this._createConnectionGroup(entry.pos1, entry.pos2, 'normal');
         newGroup.userData.edgeId = edgeId;
         newGroup.userData.sourceId = entry.edge.source;
         newGroup.userData.targetId = entry.edge.target;
@@ -152,17 +251,21 @@ export class ConnectionManager {
         scene.add(newGroup);
         entry.group = newGroup;
         entry.isHighlighted = false;
+        entry.isPacketActive = false;
       }
     }
   }
 
   /**
    * Internal builder for connection geometry (cylinder link between two points in 3D).
+   * @param {{x: number, y: number, z: number}} pos1
+   * @param {{x: number, y: number, z: number}} pos2
+   * @param {'normal'|'route'|'packet'} [mode='normal']
    * @private
    */
-  _createConnectionGroup(pos1, pos2, isHighlighted) {
+  _createConnectionGroup(pos1, pos2, mode = 'normal') {
     const group = new THREE.Group();
-    const style = isHighlighted ? STYLE_ROUTE : STYLE_NORMAL;
+    const style = mode === 'packet' ? STYLE_ACTIVE_PACKET : mode === 'route' ? STYLE_ROUTE : STYLE_NORMAL;
 
     // Connect from device center (y offset ~0.02m)
     const yOffset = 0.015;

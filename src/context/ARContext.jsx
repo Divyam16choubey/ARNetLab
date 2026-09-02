@@ -11,8 +11,10 @@ import { ReticleManager } from '../ar/ReticleManager';
 import { PlacementManager } from '../ar/PlacementManager';
 import { DeviceManager } from '../ar/DeviceManager';
 import { ConnectionManager } from '../ar/ConnectionManager';
+import { PacketMesh } from '../ar/PacketMesh';
 import { NetworkGraph } from '../network/NetworkGraph';
 import { findShortestPath } from '../network/dijkstra';
+import { PacketSimulator, SIMULATION_STATUS } from '../network/PacketSimulator';
 import { NODE_TYPE_CONFIG, NODE_TYPES } from '../constants/networkTypes';
 
 /**
@@ -22,6 +24,7 @@ import { NODE_TYPE_CONFIG, NODE_TYPES } from '../constants/networkTypes';
  * @typedef {'none'|'placed'} ARPlacementStatus
  * @typedef {'PC'|'SWITCH'|'ROUTER'|'SERVER'} DeviceType
  * @typedef {'place'|'select'|'connect'|'source'|'destination'} InteractionMode
+ * @typedef {'IDLE'|'READY'|'RUNNING'|'PAUSED'|'COMPLETED'|'STOPPED'|'ERROR'} SimStatus
  */
 
 /** @type {React.Context} */
@@ -50,6 +53,18 @@ export function ARProvider({ children }) {
   const [route, setRoute] = useState(null);
   const [statusMessage, setStatusMessage] = useState(null);
 
+  // ---- Phase 5: Virtual Packet Simulation State ----
+  const [simulationStatus, setSimulationStatus] = useState(/** @type {SimStatus} */ (SIMULATION_STATUS.IDLE));
+  const [packetInfo, setPacketInfo] = useState({
+    packetId: null,
+    currentNodeId: null,
+    nextNodeId: null,
+    currentEdgeId: null,
+    progress: 0,
+    elapsedTime: 0,
+    hops: 0,
+  });
+
   // ---- Refs for AR managers & immediate state access ----
   const arManagerRef = useRef(null);
   const hitTestManagerRef = useRef(null);
@@ -57,7 +72,13 @@ export function ARProvider({ children }) {
   const placementManagerRef = useRef(null);
   const deviceManagerRef = useRef(null);
   const connectionManagerRef = useRef(null);
+  const packetMeshRef = useRef(new PacketMesh());
   const graphRef = useRef(new NetworkGraph());
+
+  // Packet simulation manager and loop refs
+  const packetSimulatorRef = useRef(null);
+  const animFrameIdRef = useRef(null);
+  const lastFrameTimeRef = useRef(0);
 
   // Synchronous refs for event handlers to prevent stale closures
   const nodesRef = useRef(nodes);
@@ -76,6 +97,10 @@ export function ARProvider({ children }) {
   sourceNodeIdRef.current = sourceNodeId;
   const destinationNodeIdRef = useRef(destinationNodeId);
   destinationNodeIdRef.current = destinationNodeId;
+  const routeRef = useRef(route);
+  routeRef.current = route;
+  const simulationStatusRef = useRef(simulationStatus);
+  simulationStatusRef.current = simulationStatus;
 
   // Stable label counters per device type
   const nodeCountersRef = useRef({
@@ -88,6 +113,117 @@ export function ARProvider({ children }) {
   // Track hit-test state changes without React re-render per frame
   const hitTestReadyRef = useRef(false);
   const hitTestIntervalRef = useRef(null);
+
+  // Initialize PacketSimulator with discrete milestone callbacks
+  useEffect(() => {
+    packetSimulatorRef.current = new PacketSimulator({
+      onStart: (ev) => {
+        setSimulationStatus(SIMULATION_STATUS.RUNNING);
+        const srcNode = graphRef.current.getNode(ev.sourceId);
+        setStatusMessage(`Packet dispatched from ${srcNode?.label || ev.sourceId}.`);
+        setPacketInfo({
+          packetId: ev.packetId,
+          currentNodeId: ev.sourceId,
+          nextNodeId: ev.routeNodeIds[1] || null,
+          currentEdgeId: null,
+          progress: 0,
+          elapsedTime: 0,
+          hops: ev.routeNodeIds.length - 1,
+        });
+      },
+      onNodeReached: (ev) => {
+        const node = graphRef.current.getNode(ev.nodeId);
+        setStatusMessage(`Packet reached ${node?.label || ev.nodeId} (Hop ${ev.hopIndex}/${ev.totalHops})`);
+        setPacketInfo((prev) => ({
+          ...prev,
+          currentNodeId: ev.nodeId,
+        }));
+      },
+      onEdgeChanged: (ev) => {
+        const arManager = arManagerRef.current;
+        const connectionManager = connectionManagerRef.current;
+        if (connectionManager && arManager?.scene) {
+          connectionManager.setActivePacketEdge(arManager.scene, ev.edgeId);
+        }
+        const nextNode = graphRef.current.getNode(ev.toNodeId);
+        setStatusMessage(`Packet → ${nextNode?.label || ev.toNodeId}`);
+        setPacketInfo((prev) => ({
+          ...prev,
+          currentNodeId: ev.fromNodeId,
+          nextNodeId: ev.toNodeId,
+          currentEdgeId: ev.edgeId,
+        }));
+      },
+      onComplete: (ev) => {
+        const arManager = arManagerRef.current;
+        const connectionManager = connectionManagerRef.current;
+        if (connectionManager && arManager?.scene) {
+          connectionManager.clearActivePacketEdge(arManager.scene);
+        }
+        setSimulationStatus(SIMULATION_STATUS.COMPLETED);
+        const dstNode = graphRef.current.getNode(ev.destinationId);
+        setStatusMessage(`Packet delivered to ${dstNode?.label || ev.destinationId} in ${ev.totalTime}s!`);
+        setPacketInfo((prev) => ({
+          ...prev,
+          currentNodeId: ev.destinationId,
+          nextNodeId: null,
+          currentEdgeId: null,
+          progress: 1.0,
+          elapsedTime: ev.totalTime,
+        }));
+        if (animFrameIdRef.current) {
+          cancelAnimationFrame(animFrameIdRef.current);
+          animFrameIdRef.current = null;
+        }
+      },
+      onStop: (ev) => {
+        const arManager = arManagerRef.current;
+        const connectionManager = connectionManagerRef.current;
+        const packetMesh = packetMeshRef.current;
+        if (connectionManager && arManager?.scene) {
+          connectionManager.clearActivePacketEdge(arManager.scene);
+        }
+        if (packetMesh && arManager?.scene) {
+          packetMesh.dispose(arManager.scene);
+        }
+        setSimulationStatus(SIMULATION_STATUS.STOPPED);
+        setStatusMessage('Packet simulation stopped.');
+        setPacketInfo((prev) => ({
+          ...prev,
+          currentEdgeId: null,
+          elapsedTime: ev?.elapsedTime ?? prev.elapsedTime,
+        }));
+        if (animFrameIdRef.current) {
+          cancelAnimationFrame(animFrameIdRef.current);
+          animFrameIdRef.current = null;
+        }
+      },
+      onError: (ev) => {
+        const arManager = arManagerRef.current;
+        const connectionManager = connectionManagerRef.current;
+        const packetMesh = packetMeshRef.current;
+        if (connectionManager && arManager?.scene) {
+          connectionManager.clearActivePacketEdge(arManager.scene);
+        }
+        if (packetMesh && arManager?.scene) {
+          packetMesh.dispose(arManager.scene);
+        }
+        setSimulationStatus(SIMULATION_STATUS.ERROR);
+        setStatusMessage(ev?.message || 'Simulation error.');
+        if (animFrameIdRef.current) {
+          cancelAnimationFrame(animFrameIdRef.current);
+          animFrameIdRef.current = null;
+        }
+      },
+    });
+
+    return () => {
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+        animFrameIdRef.current = null;
+      }
+    };
+  }, []);
 
   // ---- Check WebXR support on mount ----
   useEffect(() => {
@@ -113,6 +249,7 @@ export function ARProvider({ children }) {
 
     if (!srcId || !dstId) {
       setRoute(null);
+      setSimulationStatus(SIMULATION_STATUS.IDLE);
       if (connectionManager && arManager?.scene) {
         connectionManager.clearRouteHighlights(arManager.scene);
       }
@@ -129,10 +266,12 @@ export function ARProvider({ children }) {
       connectionManager.highlightRoute(arManager.scene, result.edgeIds);
       const pathNames = result.path.map((id) => graph.getNode(id)?.label || id).join(' → ');
       setStatusMessage(`Route found: ${pathNames} (${result.totalWeight.toFixed(2)}m)`);
+      setSimulationStatus(SIMULATION_STATUS.READY);
     } else {
       if (connectionManager && arManager?.scene) {
         connectionManager.clearRouteHighlights(arManager.scene);
       }
+      setSimulationStatus(SIMULATION_STATUS.IDLE);
       if (srcNode && dstNode) {
         setStatusMessage(`No route available between ${srcNode.label} and ${dstNode.label}.`);
       }
@@ -163,8 +302,8 @@ export function ARProvider({ children }) {
 
     try {
       await arManager.startSession(canvasElement, {
-        onFrame: (frame) => {
-          // Frame loop runs in vanilla JS — no setState here
+        onFrame: (frame, time) => {
+          // 1. Surface detection via HitTest
           const hasHit = hitTestManager.update(
             frame,
             arManager.localRefSpace
@@ -176,6 +315,19 @@ export function ARProvider({ children }) {
           } else {
             reticleManager.hide();
             hitTestReadyRef.current = false;
+          }
+
+          // 2. High-frequency Packet Simulation (runs in vanilla JS - zero React setState per frame!)
+          const sim = packetSimulatorRef.current;
+          const mesh = packetMeshRef.current;
+          if (sim && sim.isRunning() && mesh && arManager?.scene) {
+            const now = typeof time === 'number' && time > 0 ? time : performance.now();
+            const dt = lastFrameTimeRef.current ? Math.max(0, (now - lastFrameTimeRef.current) / 1000) : 0.016;
+            lastFrameTimeRef.current = now;
+
+            const res = sim.update(dt, graphRef.current, (id) => deviceManager.getNodePosition(id));
+            mesh.setPosition(res.position.x, res.position.y, res.position.z);
+            mesh.animate(now * 0.001);
           }
         },
         onSessionEnd: () => {
@@ -191,6 +343,7 @@ export function ARProvider({ children }) {
           setSourceNodeId(null);
           setDestinationNodeId(null);
           setRoute(null);
+          setSimulationStatus(SIMULATION_STATUS.IDLE);
           setStatusMessage(null);
         },
       });
@@ -346,6 +499,23 @@ export function ARProvider({ children }) {
     const graph = graphRef.current;
     const arManager = arManagerRef.current;
     const connectionManager = connectionManagerRef.current;
+    const sim = packetSimulatorRef.current;
+
+    // Topology Safety: If simulation is running, stop it cleanly
+    if (sim?.isRunning()) {
+      sim.stop();
+      if (packetMeshRef.current && arManager?.scene) {
+        packetMeshRef.current.dispose(arManager.scene);
+      }
+      if (connectionManager && arManager?.scene) {
+        connectionManager.clearActivePacketEdge(arManager.scene);
+      }
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+        animFrameIdRef.current = null;
+      }
+      setSimulationStatus(SIMULATION_STATUS.STOPPED);
+    }
 
     graph.removeEdge(edgeId);
 
@@ -370,6 +540,25 @@ export function ARProvider({ children }) {
   const setSourceNode = useCallback((nodeId) => {
     const deviceManager = deviceManagerRef.current;
     const graph = graphRef.current;
+    const arManager = arManagerRef.current;
+    const connectionManager = connectionManagerRef.current;
+    const sim = packetSimulatorRef.current;
+
+    // If simulation is running, stop it cleanly before switching source
+    if (sim?.isRunning()) {
+      sim.stop();
+      if (packetMeshRef.current && arManager?.scene) {
+        packetMeshRef.current.dispose(arManager.scene);
+      }
+      if (connectionManager && arManager?.scene) {
+        connectionManager.clearActivePacketEdge(arManager.scene);
+      }
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+        animFrameIdRef.current = null;
+      }
+      setSimulationStatus(SIMULATION_STATUS.STOPPED);
+    }
 
     if (nodeId && nodeId === destinationNodeIdRef.current) {
       // Cannot be same as destination -> clear destination
@@ -398,6 +587,25 @@ export function ARProvider({ children }) {
   const setDestinationNode = useCallback((nodeId) => {
     const deviceManager = deviceManagerRef.current;
     const graph = graphRef.current;
+    const arManager = arManagerRef.current;
+    const connectionManager = connectionManagerRef.current;
+    const sim = packetSimulatorRef.current;
+
+    // If simulation is running, stop it cleanly before switching destination
+    if (sim?.isRunning()) {
+      sim.stop();
+      if (packetMeshRef.current && arManager?.scene) {
+        packetMeshRef.current.dispose(arManager.scene);
+      }
+      if (connectionManager && arManager?.scene) {
+        connectionManager.clearActivePacketEdge(arManager.scene);
+      }
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+        animFrameIdRef.current = null;
+      }
+      setSimulationStatus(SIMULATION_STATUS.STOPPED);
+    }
 
     if (nodeId && nodeId === sourceNodeIdRef.current) {
       // Cannot be same as source -> clear source
@@ -429,6 +637,23 @@ export function ARProvider({ children }) {
     const deviceManager = deviceManagerRef.current;
     const connectionManager = connectionManagerRef.current;
     const graph = graphRef.current;
+    const sim = packetSimulatorRef.current;
+
+    // Topology Safety: If simulation is running, stop it immediately
+    if (sim?.isRunning()) {
+      sim.stop();
+      if (packetMeshRef.current && arManager?.scene) {
+        packetMeshRef.current.dispose(arManager.scene);
+      }
+      if (connectionManager && arManager?.scene) {
+        connectionManager.clearActivePacketEdge(arManager.scene);
+      }
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+        animFrameIdRef.current = null;
+      }
+      setSimulationStatus(SIMULATION_STATUS.STOPPED);
+    }
 
     // 1. Remove from 3D device manager
     if (deviceManager && arManager?.scene) {
@@ -643,18 +868,160 @@ export function ARProvider({ children }) {
     }
   }, [createConnection, setSourceNode, setDestinationNode]);
 
+  // ---- Send Virtual Packet ----
+  const sendPacket = useCallback(() => {
+    const graph = graphRef.current;
+    const srcId = sourceNodeIdRef.current;
+    const dstId = destinationNodeIdRef.current;
+    const activeRoute = routeRef.current;
+    const sim = packetSimulatorRef.current;
+
+    if (!srcId) {
+      setStatusMessage('No source device selected. Set a Source device first.');
+      return false;
+    }
+    if (!dstId) {
+      setStatusMessage('No destination device selected. Set a Destination device first.');
+      return false;
+    }
+    if (!activeRoute || !activeRoute.reachable || activeRoute.path.length < 2) {
+      setStatusMessage('Calculate a valid route before sending a packet.');
+      return false;
+    }
+    if (sim?.isRunning()) {
+      setStatusMessage('Packet simulation is already running.');
+      return false;
+    }
+
+    const arManager = arManagerRef.current;
+    const deviceManager = deviceManagerRef.current;
+    const posLookup = (id) => deviceManager?.getNodePosition(id) || graph.getNode(id)?.position;
+
+    const sourcePos = posLookup(srcId);
+    if (!sourcePos) {
+      setStatusMessage('Could not locate 3D position of source device.');
+      return false;
+    }
+
+    // Initialize 3D packet mesh in Three.js scene
+    if (packetMeshRef.current && arManager?.scene) {
+      packetMeshRef.current.init(arManager.scene, sourcePos);
+    }
+
+    lastFrameTimeRef.current = performance.now();
+    const success = sim.start(activeRoute, graph, posLookup);
+
+    // If running outside WebXR presenting session (e.g. desktop preview), drive via requestAnimationFrame
+    if (success && (!arManager?.session || !arManager.renderer?.xr?.isPresenting)) {
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+      }
+      const animLoop = (now) => {
+        if (!sim.isRunning()) return;
+        const dt = lastFrameTimeRef.current ? Math.max(0, (now - lastFrameTimeRef.current) / 1000) : 0.016;
+        lastFrameTimeRef.current = now;
+
+        const res = sim.update(dt, graphRef.current, posLookup);
+        if (packetMeshRef.current && arManager?.scene) {
+          packetMeshRef.current.setPosition(res.position.x, res.position.y, res.position.z);
+          packetMeshRef.current.animate(now * 0.001);
+        }
+
+        if (!res.isFinished) {
+          animFrameIdRef.current = requestAnimationFrame(animLoop);
+        }
+      };
+      animFrameIdRef.current = requestAnimationFrame(animLoop);
+    }
+
+    return success;
+  }, []);
+
+  // ---- Stop Virtual Packet ----
+  const stopPacket = useCallback(() => {
+    const sim = packetSimulatorRef.current;
+    const arManager = arManagerRef.current;
+    const connectionManager = connectionManagerRef.current;
+    const packetMesh = packetMeshRef.current;
+
+    if (sim) {
+      sim.stop();
+    }
+    if (packetMesh && arManager?.scene) {
+      packetMesh.dispose(arManager.scene);
+    }
+    if (connectionManager && arManager?.scene) {
+      connectionManager.clearActivePacketEdge(arManager.scene);
+    }
+    if (animFrameIdRef.current) {
+      cancelAnimationFrame(animFrameIdRef.current);
+      animFrameIdRef.current = null;
+    }
+
+    setSimulationStatus(SIMULATION_STATUS.STOPPED);
+    setStatusMessage('Packet simulation stopped.');
+  }, []);
+
+  // ---- Reset Packet ----
+  const resetPacket = useCallback(() => {
+    const sim = packetSimulatorRef.current;
+    const arManager = arManagerRef.current;
+    const connectionManager = connectionManagerRef.current;
+    const packetMesh = packetMeshRef.current;
+
+    if (sim) {
+      sim.stop();
+      sim.reset(Boolean(routeRef.current?.reachable));
+    }
+    if (packetMesh && arManager?.scene) {
+      packetMesh.dispose(arManager.scene);
+    }
+    if (connectionManager && arManager?.scene) {
+      connectionManager.clearActivePacketEdge(arManager.scene);
+    }
+    if (animFrameIdRef.current) {
+      cancelAnimationFrame(animFrameIdRef.current);
+      animFrameIdRef.current = null;
+    }
+
+    setSimulationStatus(routeRef.current?.reachable ? SIMULATION_STATUS.READY : SIMULATION_STATUS.IDLE);
+    setPacketInfo({
+      packetId: null,
+      currentNodeId: null,
+      nextNodeId: null,
+      currentEdgeId: null,
+      progress: 0,
+      elapsedTime: 0,
+      hops: 0,
+    });
+  }, []);
+
   // ---- Reset Network (clears devices & connections only, keeps workspace anchor & AR session) ----
   const resetNetwork = useCallback(() => {
     const arManager = arManagerRef.current;
     const deviceManager = deviceManagerRef.current;
     const connectionManager = connectionManagerRef.current;
     const graph = graphRef.current;
+    const sim = packetSimulatorRef.current;
+    const packetMesh = packetMeshRef.current;
 
+    if (sim) {
+      sim.stop();
+      sim.reset(false);
+    }
+    if (packetMesh && arManager?.scene) {
+      packetMesh.dispose(arManager.scene);
+    }
+    if (connectionManager && arManager?.scene) {
+      connectionManager.clearActivePacketEdge(arManager.scene);
+      connectionManager.removeAll(arManager.scene);
+    }
     if (deviceManager && arManager?.scene) {
       deviceManager.removeAll(arManager.scene);
     }
-    if (connectionManager && arManager?.scene) {
-      connectionManager.removeAll(arManager.scene);
+    if (animFrameIdRef.current) {
+      cancelAnimationFrame(animFrameIdRef.current);
+      animFrameIdRef.current = null;
     }
 
     graph.clear();
@@ -667,6 +1034,16 @@ export function ARProvider({ children }) {
     setDestinationNodeId(null);
     setConnectSourceNodeId(null);
     setRoute(null);
+    setSimulationStatus(SIMULATION_STATUS.IDLE);
+    setPacketInfo({
+      packetId: null,
+      currentNodeId: null,
+      nextNodeId: null,
+      currentEdgeId: null,
+      progress: 0,
+      elapsedTime: 0,
+      hops: 0,
+    });
     setActiveModeState('place');
 
     nodeCountersRef.current = {
@@ -687,18 +1064,32 @@ export function ARProvider({ children }) {
     const connectionManager = connectionManagerRef.current;
     const reticleManager = reticleManagerRef.current;
     const graph = graphRef.current;
+    const sim = packetSimulatorRef.current;
+    const packetMesh = packetMeshRef.current;
 
-    if (deviceManager && arManager?.scene) {
-      deviceManager.removeAll(arManager.scene);
+    if (sim) {
+      sim.stop();
+      sim.reset(false);
+    }
+    if (packetMesh && arManager?.scene) {
+      packetMesh.dispose(arManager.scene);
     }
     if (connectionManager && arManager?.scene) {
+      connectionManager.clearActivePacketEdge(arManager.scene);
       connectionManager.removeAll(arManager.scene);
+    }
+    if (deviceManager && arManager?.scene) {
+      deviceManager.removeAll(arManager.scene);
     }
     if (placementManager && arManager?.scene) {
       placementManager.reset(arManager.scene);
     }
     if (reticleManager) {
       reticleManager.show();
+    }
+    if (animFrameIdRef.current) {
+      cancelAnimationFrame(animFrameIdRef.current);
+      animFrameIdRef.current = null;
     }
 
     graph.clear();
@@ -711,6 +1102,16 @@ export function ARProvider({ children }) {
     setDestinationNodeId(null);
     setConnectSourceNodeId(null);
     setRoute(null);
+    setSimulationStatus(SIMULATION_STATUS.IDLE);
+    setPacketInfo({
+      packetId: null,
+      currentNodeId: null,
+      nextNodeId: null,
+      currentEdgeId: null,
+      progress: 0,
+      elapsedTime: 0,
+      hops: 0,
+    });
     setActiveModeState('place');
 
     nodeCountersRef.current = {
@@ -734,8 +1135,20 @@ export function ARProvider({ children }) {
     }
     hitTestReadyRef.current = false;
 
+    if (animFrameIdRef.current) {
+      cancelAnimationFrame(animFrameIdRef.current);
+      animFrameIdRef.current = null;
+    }
+
     const arManager = arManagerRef.current;
 
+    if (packetSimulatorRef.current) {
+      packetSimulatorRef.current.stop();
+      packetSimulatorRef.current.reset(false);
+    }
+    if (packetMeshRef.current) {
+      packetMeshRef.current.dispose(arManager?.scene);
+    }
     if (connectionManagerRef.current) {
       connectionManagerRef.current.dispose(arManager?.scene);
       connectionManagerRef.current = null;
@@ -790,6 +1203,12 @@ export function ARProvider({ children }) {
     sourceNodeId,
     destinationNodeId,
     route,
+    // Phase 5: Virtual Packet Simulation
+    simulationStatus,
+    packetInfo,
+    sendPacket,
+    stopPacket,
+    resetPacket,
     // Actions
     startAR,
     endAR,

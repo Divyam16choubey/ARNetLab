@@ -41,6 +41,12 @@ const IMPLEMENTED = [
   'Real-time 3D AR route highlighting with emerald glowing aura',
   'Dynamic topology updates (route invalidation/recalculation on node/edge deletion)',
   'Dual reset system: Reset Network vs Reset Workspace',
+  'Virtual 3D packet simulation engine (PacketSimulator.js)',
+  'Faceted glowing 3D packet mesh with halo pulsation',
+  'Constant-speed time-based interpolation along shortest route',
+  'Active packet edge highlighting during link traversal',
+  'Hop-by-hop milestone events and destination delivery feedback',
+  'Topology-aware simulation safety (instant halt on node/edge deletion)',
   'Mobile-first touch controls with safe-area padding',
   'Dark and light theme with persistence',
   'Reusable UI component library with Tailwind CSS styling',
@@ -48,10 +54,10 @@ const IMPLEMENTED = [
 ];
 
 const PLANNED = [
-  { feature: 'Virtual packet 3D mesh and visual representation', phase: 5 },
-  { feature: 'Real-time animated packet traversal along shortest path', phase: 5 },
-  { feature: 'Packet transmission simulation and controls (Play, Pause, Speed)', phase: 5 },
-  { feature: 'Hop-by-hop packet processing visualization', phase: 5 },
+  { feature: 'Real Android device hardware field testing', phase: 6 },
+  { feature: 'WebXR camera tracking stability & drift compensation', phase: 6 },
+  { feature: 'Mobile performance profiling and memory optimization', phase: 6 },
+  { feature: 'Cross-browser compatibility validation (Chrome, Samsung Internet)', phase: 6 },
 ];
 
 export default function AboutPage() {
@@ -110,7 +116,7 @@ export default function AboutPage() {
           <div>
             <h2 className="flex items-center gap-3 text-xl font-bold mb-5 text-neutral-900 dark:text-neutral-50 [&_svg]:text-primary-500 [&_svg]:shrink-0">
               <CheckCircle2 size={22} />
-              Implemented (Phase 1, 2 &amp; 3)
+              Implemented (Phases 1–5)
             </h2>
             <ul className="flex flex-col gap-3">
               {IMPLEMENTED.map((item) => (

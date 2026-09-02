@@ -132,12 +132,12 @@ export class ARManager {
    * @param {number} _time
    * @param {XRFrame} frame
    */
-  _onXRFrame(_time, frame) {
+  _onXRFrame(time, frame) {
     if (!this.session || !this.renderer || !this.scene || !this.camera) return;
 
-    // Let external code process the frame (hit-test, reticle, etc.)
+    // Let external code process the frame (hit-test, reticle, packet animation, etc.)
     if (this.onFrameCallback) {
-      this.onFrameCallback(frame);
+      this.onFrameCallback(frame, time);
     }
 
     // Render

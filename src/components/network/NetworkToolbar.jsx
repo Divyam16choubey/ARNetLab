@@ -5,6 +5,8 @@ import {
   RotateCcw,
   Circle,
   Target,
+  Send,
+  Square,
 } from 'lucide-react';
 import { useAR } from '../../hooks/useAR';
 
@@ -15,6 +17,10 @@ export default function NetworkToolbar() {
     setActiveMode,
     sourceNodeId,
     destinationNodeId,
+    route,
+    simulationStatus,
+    sendPacket,
+    stopPacket,
     recalculateRoute,
     resetNetwork,
   } = useAR();
@@ -22,6 +28,8 @@ export default function NetworkToolbar() {
   const hasMultipleNodes = nodes.length >= 2;
   const hasNodes = nodes.length >= 1;
   const canRunRoute = Boolean(sourceNodeId && destinationNodeId);
+  const isRouteReady = Boolean(route && route.reachable && route.path.length >= 2);
+  const isRunning = simulationStatus === 'RUNNING';
 
   const TOOLS = [
     {
@@ -73,6 +81,16 @@ export default function NetworkToolbar() {
       active: false,
       onClick: () => recalculateRoute(),
       activeTitle: 'Calculate Dijkstra Shortest Path',
+    },
+    {
+      id: 'packet',
+      label: isRunning ? 'Stop Pkt' : 'Send Pkt',
+      icon: isRunning ? Square : Send,
+      phase: 5,
+      enabled: isRunning || isRouteReady,
+      active: isRunning,
+      onClick: () => (isRunning ? stopPacket() : sendPacket()),
+      activeTitle: isRunning ? 'Stop packet simulation' : 'Dispatch 3D virtual packet along route',
     },
     {
       id: 'reset',

@@ -16,6 +16,9 @@ import {
   Target,
   Route,
   Plus,
+  Send,
+  Square,
+  Zap,
 } from 'lucide-react';
 import { useAR } from '../../hooks/useAR';
 import { NODE_TYPE_LIST } from '../../constants/networkTypes';
@@ -29,7 +32,7 @@ const ICON_MAP = {
 
 /**
  * AR-mode floating overlay — status messages, mode selector, device palette,
- * contextual inspector, connection assistant, and route HUD.
+ * contextual inspector, connection assistant, route HUD, and packet simulation controls.
  */
 export default function AROverlay() {
   const {
@@ -47,6 +50,10 @@ export default function AROverlay() {
     sourceNodeId,
     destinationNodeId,
     route,
+    simulationStatus,
+    packetInfo,
+    sendPacket,
+    stopPacket,
     endAR,
     setActiveMode,
     selectDeviceType,
@@ -63,11 +70,16 @@ export default function AROverlay() {
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
   const connectSourceNode = nodes.find((n) => n.id === connectSourceNodeId);
 
+  const isRunning = simulationStatus === 'RUNNING';
+
   // Derive top banner icon and text
   let statusIcon = <ScanLine size={18} />;
   let defaultText = '';
 
-  if (session === 'starting') {
+  if (isRunning) {
+    statusIcon = <Zap size={18} className="text-amber-400 animate-pulse" />;
+    defaultText = statusMessage || 'Packet in transit…';
+  } else if (session === 'starting') {
     statusIcon = <ScanLine size={18} />;
     defaultText = 'Starting AR session…';
   } else if (placement === 'none') {
@@ -120,7 +132,7 @@ export default function AROverlay() {
 
         {/* Counter & Topology Pill */}
         {placement === 'placed' && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <div className="inline-flex items-center gap-1.5 py-1 px-3 bg-neutral-900/80 text-neutral-300 rounded-full text-xs font-semibold backdrop-blur-md border border-white/10 animate-fade-in">
               <Layers size={13} className="text-primary-400" />
               <span>{nodes.length} {nodes.length === 1 ? 'Device' : 'Devices'}</span>
@@ -132,6 +144,33 @@ export default function AROverlay() {
               <div className="inline-flex items-center gap-1.5 py-1 px-3 bg-emerald-950/80 text-emerald-300 rounded-full text-xs font-bold backdrop-blur-md border border-emerald-500/30 animate-fade-in">
                 <Route size={13} className="text-emerald-400" />
                 <span>Route: {route.totalWeight.toFixed(2)}m ({route.path.length - 1} hops)</span>
+              </div>
+            )}
+
+            {/* Virtual Packet Dispatch / Stop Controls in AR HUD */}
+            {route && route.reachable && !isRunning && (
+              <button
+                className="inline-flex items-center gap-1.5 py-1 px-3 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-full text-xs font-bold backdrop-blur-md border border-amber-300/40 shadow-lg cursor-pointer transition-all [touch-action:manipulation] animate-fade-in"
+                onClick={sendPacket}
+                aria-label="Send Packet in AR"
+              >
+                <Send size={13} />
+                <span>{simulationStatus === 'COMPLETED' ? 'Send Again' : 'Send Packet'}</span>
+              </button>
+            )}
+
+            {isRunning && (
+              <div className="inline-flex items-center gap-1.5 py-1 px-3 bg-amber-950/90 text-amber-300 rounded-full text-xs font-bold backdrop-blur-md border border-amber-500/50 shadow-lg animate-fade-in">
+                <Zap size={13} className="text-amber-400 animate-pulse" />
+                <span>{packetInfo.elapsedTime.toFixed(1)}s</span>
+                <button
+                  onClick={stopPacket}
+                  className="ml-1 p-0.5 bg-rose-500 hover:bg-rose-600 text-white rounded-full cursor-pointer active:scale-95"
+                  title="Stop Packet Simulation"
+                  aria-label="Stop Packet Simulation"
+                >
+                  <Square size={11} />
+                </button>
               </div>
             )}
           </div>

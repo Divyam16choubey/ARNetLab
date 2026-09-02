@@ -1,9 +1,10 @@
-import { Link2, Circle, Target, X } from 'lucide-react';
+import { Link2, Circle, Target, X, Send, Square, Zap } from 'lucide-react';
 import { useAR } from '../../hooks/useAR';
 
 /**
  * Side panel controls for network operations.
  * Phase 4: Interactive connection, source, and destination selection.
+ * Phase 5: Virtual packet dispatch and traversal control.
  */
 export default function NetworkControls() {
   const {
@@ -12,6 +13,11 @@ export default function NetworkControls() {
     setActiveMode,
     sourceNodeId,
     destinationNodeId,
+    route,
+    simulationStatus,
+    packetInfo,
+    sendPacket,
+    stopPacket,
     setSourceNode,
     setDestinationNode,
   } = useAR();
@@ -19,6 +25,8 @@ export default function NetworkControls() {
   const sourceNode = nodes.find((n) => n.id === sourceNodeId);
   const destNode = nodes.find((n) => n.id === destinationNodeId);
   const hasNodes = nodes.length >= 2;
+  const isRouteReady = Boolean(route && route.reachable && route.path.length >= 2);
+  const isRunning = simulationStatus === 'RUNNING';
 
   return (
     <div>
@@ -161,6 +169,40 @@ export default function NetworkControls() {
               <X size={14} />
             </button>
           )}
+        </div>
+
+        {/* Phase 5: Virtual Packet Simulation Trigger */}
+        <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-2 flex items-center gap-1.5">
+            <Zap size={13} className="text-amber-500" />
+            <span>Virtual Packet Simulation (Phase 5)</span>
+          </p>
+          <div className="flex items-center gap-2">
+            {!isRunning ? (
+              <button
+                className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                  isRouteReady
+                    ? 'bg-amber-500 hover:bg-amber-600 text-white cursor-pointer active:scale-98'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed border border-neutral-200 dark:border-neutral-700'
+                }`}
+                onClick={sendPacket}
+                disabled={!isRouteReady}
+                aria-label="Send Virtual Packet"
+              >
+                <Send size={14} />
+                <span>{simulationStatus === 'COMPLETED' ? 'Send Again' : 'Send Virtual Packet'}</span>
+              </button>
+            ) : (
+              <button
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold bg-rose-500 hover:bg-rose-600 text-white cursor-pointer transition-all shadow-sm active:scale-98 animate-pulse"
+                onClick={stopPacket}
+                aria-label="Stop Packet Simulation"
+              >
+                <Square size={14} />
+                <span>Stop Packet ({packetInfo.elapsedTime.toFixed(1)}s)</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

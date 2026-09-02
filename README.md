@@ -4,9 +4,9 @@
 
 **ARNetLab: An Interactive Augmented Reality Platform for Network Topology Visualization and Routing** is an educational project for exploring computer-network topologies in a physical space. The intended experience is to place virtual devices such as PCs, switches, routers, and servers on a real surface, connect them, and observe a route between selected devices.
 
-## Current Status — Phase 4 (Network Topology & Shortest-Path Routing)
+## Current Status — Phase 5 (Virtual Packet Simulation & Route Traversal)
 
-Phase 4 transforms the 3D device workspace into an interactive **network topology and routing system**. Users can create undirected network links between devices in 3D AR space, calculate dynamic edge weights using real 3D Euclidean distances, designate Source and Destination endpoints, execute Dijkstra's algorithm to compute the shortest route, visualize the route in AR with glowing green highlights, manage/delete connections, and observe automatic route recalculation/invalidation upon topology changes.
+Phase 5 introduces a complete **3D virtual packet simulation** operating directly upon the Dijkstra shortest route computed in Phase 4. Users can dispatch a virtual 3D data packet from the Source device, follow its edge-by-edge traversal across every intermediate hop at a constant world-space speed with active edge highlighting, witness destination delivery feedback, and safely stop, reset, or re-run the simulation. Dynamic topology mutations during transit (such as deleting an active edge or device) are handled with instant, safe termination.
 
 ### Implemented
 
@@ -56,16 +56,26 @@ Phase 4 transforms the 3D device workspace into an interactive **network topolog
 - **Dynamic Topology Reactivity** — Removing a device or connection automatically recalculates or invalidates active routes in real time.
 - **Interactive UI Controls** — Mode Switcher HUD in AR (`Place`, `Connect`, `Source`, `Dest`), `RouteStatus` analytics card with hop sequences and total distance metrics, and updated `NetworkLegend`.
 
-### Not Implemented (Planned for Future Phases)
+#### Phase 5 — Virtual Packet Simulation & Route Traversal
+- **Packet Simulation Engine (`PacketSimulator.js`)** — Discrete simulation state machine (`IDLE`, `READY`, `RUNNING`, `PAUSED`, `COMPLETED`, `STOPPED`, `ERROR`).
+- **Constant World-Space Speed** — Frame-rate independent movement ($0.35\text{ m/s}$ by default): $\text{progress} += \frac{\text{speed} \cdot \Delta t}{\text{edgeLength}}$.
+- **Edge-by-Edge Traversal** — Seamless sequential progression across every segment in the computed Dijkstra shortest path without node teleportation.
+- **Lightweight 3D Packet Mesh (`PacketMesh.js`)** — Distinct faceted glowing icosahedron with pulsating halo beacon ring in luminous amber (`0xf59e0b`).
+- **Active Edge Visual Feedback** — Distinct bright amber/gold highlight on the link currently traversed by the packet without altering base route highlights.
+- **Dynamic Topology Safety** — Instantly terminates transit, cleans up 3D meshes, and alerts the user if any node or link on the active route is deleted during simulation.
+- **Zero Frame React Overhead** — High-frequency packet transform updates remain strictly inside Three.js in vanilla JavaScript; React state updates only on discrete milestones (start, node arrival, segment change, completion, stop, error).
+- **Simulation UI Controls** — "Send Packet", "Stop Packet", and "Send Again" controls in `RouteStatus`, `AROverlay`, `NetworkControls`, and `NetworkToolbar`.
+- **Accurate Simulation Metrics** — Displays actual elapsed simulation time (e.g. `Simulation Time: 3.4s`) and hop progress without fabricating network latency.
+- **Automated Test Suite (`packetSimulator.test.js`)** — 10 unit tests covering direct transmission, multi-hop, Dijkstra adherence, dynamic edge/node deletion, network reset, and re-dispatch (100% pass rate).
 
-| Feature | Target Phase |
-|---------|-------------|
-| Virtual packet 3D mesh & visual representation | Phase 5 |
-| Real-time animated packet traversal along route | Phase 5 |
-| Packet transmission simulation (Play, Pause, Speed) | Phase 5 |
-| Hop-by-hop packet processing visualization | Phase 5 |
+### Strictly Excluded (Visual Simulation Boundary)
 
-> **Important Boundary:** Phase 4 strictly implements the graph model, 3D links, Euclidean weighting, Dijkstra routing, source/dest selection, and route visualization. Animated packet movement and transmission simulation belong strictly to Phase 5.
+This project is a **visual educational simulation**. The following are intentionally NOT implemented:
+- No real network traffic or backend packet transmission
+- No TCP/UDP socket connections
+- No real IP packet sniffing or Wi-Fi packet capture
+- No simulated bandwidth, packet loss, or latency claims
+- No multiplayer AR networking over the internet
 
 ## Technology Stack
 
@@ -222,11 +232,11 @@ React state is **only updated on discrete events** (session start/end, placement
 - [Project report](Documentation/ARNetLab_Report.pdf)
 - [Project slides](Documentation/ARNetLab_Slides.pdf)
 
-## Next Steps (Phase 5)
+## Next Steps (Phase 6 — Real Android Device Testing & Stabilization)
 
-1. Create 3D virtual packet mesh and material (pulsing data packet object)
-2. Implement packet path traversal engine along the computed Dijkstra shortest path
-3. Add transmission controls (Play, Pause, Reset, Transmission Speed)
-4. Add hop-by-hop device processing indicators during packet transit
-5. Real-time packet telemetry and status reporting
+1. Real Android device field testing (WebXR compatibility, ARCore session stability)
+2. AR surface tracking reliability and camera drift compensation
+3. Mobile performance profiling, frame rate monitoring, and memory optimization
+4. Touch ergonomics and responsive layout validation across mobile aspect ratios
+5. Cross-browser AR compatibility testing (Chrome for Android, Samsung Internet)
 

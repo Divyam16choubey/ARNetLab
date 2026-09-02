@@ -53,6 +53,14 @@ export default function NetworkLegend() {
             <span className="w-3 h-1.5 rounded bg-emerald-400 shadow-sm shrink-0" />
             <span className="text-neutral-600 dark:text-neutral-400">Optimal Route</span>
           </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-amber-400/40 shadow-sm shrink-0" />
+            <span className="text-neutral-600 dark:text-neutral-400">Virtual Packet</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-1.5 rounded bg-amber-400 shadow-sm shrink-0" />
+            <span className="text-neutral-600 dark:text-neutral-400">Active Packet Link</span>
+          </div>
         </div>
       </div>
     </div>

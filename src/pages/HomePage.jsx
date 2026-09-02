@@ -44,7 +44,7 @@ const CAPABILITIES = [
     title: 'Packet Visualization',
     description:
       'Watch a virtual packet travel along the computed route, animating through each hop in real time.',
-    status: 'Planned for Phase 5',
+    status: 'Implemented (Phase 5)',
   },
 ];
 
