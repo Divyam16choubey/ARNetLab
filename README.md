@@ -4,43 +4,49 @@
 
 **ARNetLab: An Interactive Augmented Reality Platform for Network Topology Visualization and Routing** is an educational project for exploring computer-network topologies in a physical space. The intended experience is to place virtual devices such as PCs, switches, routers, and servers on a real surface, connect them, and observe a route between selected devices.
 
-## Current Status — Phase 1 (Foundation)
+## Current Status — Phase 2 (WebXR AR)
 
-Phase 1 provides the **complete UI foundation** and application structure. It does not include AR functionality, 3D rendering, network logic, or routing algorithms — those belong to later phases.
+Phase 2 adds **real Augmented Reality** to the application using the WebXR Device API and Three.js. Users on supported mobile devices can enter an immersive AR session, detect horizontal surfaces, and place a workspace anchor on their desk or table.
 
-### Implemented in Phase 1
+### Implemented
 
-- ✅ **Responsive landing page** with project overview, capabilities, and workflow sections
-- ✅ **AR Lab workspace** UI shell with viewport placeholder, toolbar, device selector, and network controls
-- ✅ **How It Works page** with step-by-step planned workflow timeline
-- ✅ **About page** with tech stack, implemented vs. planned feature lists
-- ✅ **Mobile-first responsive design** (mobile, tablet, desktop)
-- ✅ **Dark and light theme** with localStorage persistence and system preference detection
-- ✅ **Reusable UI component library** (Button, Card, Badge, Modal, StatusIndicator, EmptyState, LoadingState)
-- ✅ **Network UI component foundations** (NetworkToolbar, NodeTypeSelector, NetworkControls, RouteStatus, NetworkLegend)
-- ✅ **Responsive navbar** with mobile slide-in menu
-- ✅ **Footer** with navigation and project links
-- ✅ **CSS design token system** (custom properties for colors, spacing, typography, shadows)
-- ✅ **Animation system** with reduced-motion support
-- ✅ **Accessible controls** (focus states, ARIA labels, keyboard navigation, semantic HTML)
-- ✅ **Client-side routing** (React Router v6)
-- ✅ **Type definitions** (JSDoc) for future network data models
-- ✅ **Clean, modular architecture** ready for Phase 2+ extensions
+#### Phase 1 — Foundation
+- ✅ Responsive landing page with project overview, capabilities, and workflow sections
+- ✅ Mobile-first responsive design (mobile, tablet, desktop)
+- ✅ Dark and light theme with localStorage persistence
+- ✅ Reusable UI component library (Button, Card, Badge, Modal, StatusIndicator, EmptyState, LoadingState)
+- ✅ Network UI component foundations (NetworkToolbar, NodeTypeSelector, NetworkControls, RouteStatus, NetworkLegend)
+- ✅ Responsive navbar with mobile slide-in menu
+- ✅ Client-side routing (React Router v6)
+- ✅ CSS design token system, animation system, accessible controls
+
+#### Phase 2 — WebXR AR
+- ✅ **WebXR availability detection** — checks `navigator.xr` and `immersive-ar` support
+- ✅ **AR support UI** — clear status messages for supported, unsupported, and error states
+- ✅ **Immersive-ar session** — full WebXR session lifecycle (start, render loop, end)
+- ✅ **Three.js integration** — WebGLRenderer with XR enabled, scene, camera, lighting
+- ✅ **Hit testing** — WebXR hit-test source detects horizontal surfaces in real-time
+- ✅ **Placement reticle** — teal ring follows detected surfaces, hides when no surface found
+- ✅ **Tap-to-place** — places a workspace anchor (indigo platform) at the reticle position
+- ✅ **Reset placement** — removes anchor, resumes surface detection
+- ✅ **Exit AR** — ends session, disposes resources, returns to normal UI
+- ✅ **AR overlay** — floating status messages and controls during AR (glass-blur design)
+- ✅ **Performance-optimized** — XR frame loop runs in vanilla JS, no React re-renders per frame
+- ✅ **Error handling** — graceful messages for permission denied, unsupported devices, session failures
+- ✅ **Mobile UX** — touch-friendly controls, safe-area padding, 48px touch targets
 
 ### Not Implemented (Planned for Future Phases)
 
 | Feature | Target Phase |
 |---------|-------------|
-| WebXR AR session management | Phase 2 |
-| Camera-based plane detection | Phase 2 |
-| Hit testing and surface anchoring | Phase 2 |
-| 3D device placement (Three.js / R3F) | Phase 2 |
-| Network graph state management | Phase 2 |
-| Device connections and edge creation | Phase 2 |
-| Shortest-path routing algorithm | Phase 3 |
-| Packet visualization and animation | Phase 3 |
+| 3D network device models (PC, Switch, Router, Server) | Phase 3 |
+| Device placement on AR surfaces | Phase 3 |
+| Network graph state management | Phase 3 |
+| Device connections and edge creation | Phase 3 |
+| Shortest-path routing algorithm | Phase 4 |
+| Packet visualization and animation | Phase 5 |
 
-> **Important:** No AR, 3D rendering, routing, or packet simulation is functional in Phase 1. All such features are clearly labeled as "planned" or "coming soon" in the UI.
+> **Important:** No network devices, routing algorithms, or packet simulation exist yet. The AR placement currently creates a neutral workspace anchor, not network devices.
 
 ## Technology Stack
 
@@ -48,6 +54,7 @@ Phase 1 provides the **complete UI foundation** and application structure. It do
 |-----------|---------|
 | [React 18+](https://react.dev/) | Component-based UI framework |
 | [Vite](https://vite.dev/) | Build tool and dev server |
+| [Three.js](https://threejs.org/) | 3D rendering and WebXR integration |
 | [React Router v6](https://reactrouter.com/) | Client-side routing |
 | [Lucide React](https://lucide.dev/) | Lightweight icon library |
 | Vanilla CSS | Custom properties, design tokens, responsive layouts |
@@ -60,32 +67,40 @@ ARNetLab/
 ├── public/
 │   └── favicon.svg
 ├── src/
+│   ├── ar/                     # AR core modules (vanilla JS, no React)
+│   │   ├── ARManager.js        #   WebXR session lifecycle, Three.js renderer
+│   │   ├── HitTestManager.js   #   Surface detection via hit-test
+│   │   ├── ReticleManager.js   #   Placement reticle mesh
+│   │   └── PlacementManager.js #   Workspace anchor placement
 │   ├── components/
+│   │   ├── ar/                 # AR-specific UI
+│   │   │   └── AROverlay.jsx   #   Floating controls during AR session
 │   │   ├── common/             # Button, Card, Badge, Modal, StatusIndicator
 │   │   ├── layout/             # Navbar, Footer, MobileMenu, PageHeader
 │   │   ├── ui/                 # ThemeToggle, EmptyState, LoadingState
-│   │   └── network/            # NetworkToolbar, NodeTypeSelector, NetworkControls,
-│   │                             RouteStatus, NetworkLegend
+│   │   └── network/            # NetworkToolbar, NodeTypeSelector, etc.
 │   ├── pages/
-│   │   ├── HomePage.jsx        # Landing page with hero, capabilities, workflow
-│   │   ├── ARLabPage.jsx       # AR workspace shell (viewport + controls)
-│   │   ├── HowItWorksPage.jsx  # Step-by-step planned workflow
-│   │   └── AboutPage.jsx       # Project info, tech stack, status
+│   │   ├── HomePage.jsx
+│   │   ├── ARLabPage.jsx       # Two modes: default placeholder / AR active
+│   │   ├── HowItWorksPage.jsx
+│   │   └── AboutPage.jsx
 │   ├── hooks/
-│   │   └── useTheme.js
+│   │   ├── useTheme.js
+│   │   └── useAR.js
 │   ├── context/
-│   │   └── ThemeContext.jsx
+│   │   ├── ThemeContext.jsx
+│   │   └── ARContext.jsx       # React ↔ AR bridge (state only on events)
 │   ├── constants/
-│   │   └── networkTypes.js     # Node types, app identity
+│   │   └── networkTypes.js
 │   ├── types/
-│   │   └── network.js          # JSDoc type definitions
+│   │   └── network.js
 │   ├── styles/
-│   │   ├── variables.css       # Design tokens (colors, spacing, typography)
-│   │   ├── animations.css      # Keyframe animations
-│   │   └── globals.css         # Reset, base styles, utilities
-│   ├── App.jsx                 # Root component with routing
+│   │   ├── variables.css
+│   │   ├── animations.css
+│   │   └── globals.css
+│   ├── App.jsx
 │   ├── App.css
-│   └── main.jsx                # Entry point
+│   └── main.jsx
 ├── index.html
 ├── package.json
 ├── vite.config.js
@@ -121,32 +136,70 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 npm run build
 ```
 
-The built files will be in `dist/`.
+## Testing AR on a Real Mobile Device
 
-### Preview Production Build
+WebXR requires a **secure context** (HTTPS or localhost). To test on a mobile device:
 
+### Option 1: Vite Network Access
 ```bash
-npm run preview
+npm run dev -- --host
 ```
+This exposes the dev server on your local network. However, WebXR requires HTTPS on non-localhost origins, so you will need to either:
+- Use Chrome DevTools port forwarding (recommended), or
+- Configure Vite with a self-signed SSL certificate
+
+### Option 2: Chrome DevTools Port Forwarding (Recommended)
+1. Connect your Android device via USB
+2. Enable USB debugging on the device
+3. Open `chrome://inspect` in desktop Chrome
+4. Set up port forwarding: `5173` → `localhost:5173`
+5. On the device, open Chrome and navigate to `http://localhost:5173/ar-lab`
+
+### Device Requirements
+- **Android** device with ARCore support
+- **Chrome** browser (v79+ with WebXR support)
+- Camera permission must be granted
+
+### Desktop Fallback
+On desktop browsers (which lack WebXR AR support), the AR Lab page shows a clear "AR is not supported" message with the standard Phase 1 placeholder UI.
 
 ## Pages
 
 | Route | Page | Description |
 |-------|------|-------------|
 | `/` | Home | Landing page with hero, capabilities, and workflow overview |
-| `/ar-lab` | AR Lab | Workspace shell with viewport placeholder and network controls |
+| `/ar-lab` | AR Lab | AR workspace — Enter AR on mobile, placeholder on desktop |
 | `/how-it-works` | How It Works | Step-by-step walkthrough of the planned AR experience |
 | `/about` | About | Project overview, tech stack, and development status |
+
+## AR Architecture
+
+```
+React (UI layer)          Vanilla JS (XR frame loop)
+─────────────────         ───────────────────────────
+ARContext.jsx ──────────► ARManager.js
+  ├─ support state          ├─ Three.js renderer
+  ├─ session state          ├─ XR session lifecycle
+  ├─ hitTest state          ├─ render loop
+  └─ placement state      HitTestManager.js
+                             ├─ XRHitTestSource
+                             └─ per-frame pose extraction
+                           ReticleManager.js
+                             └─ ring mesh on surfaces
+                           PlacementManager.js
+                             └─ workspace anchor mesh
+```
+
+React state is **only updated on discrete events** (session start/end, placement, errors). The XR frame loop runs in vanilla JavaScript with zero React re-renders per frame.
 
 ## Documentation
 
 - [Project report](Documentation/ARNetLab_Report.pdf)
 - [Project slides](Documentation/ARNetLab_Slides.pdf)
 
-## Next Steps (Phase 2)
+## Next Steps (Phase 3)
 
-1. Integrate WebXR for immersive AR sessions
-2. Implement camera access and plane detection
-3. Add Three.js / React Three Fiber for 3D rendering
-4. Enable device placement on detected surfaces
-5. Implement network graph state management
+1. Create 3D models for network devices (PC, Switch, Router, Server)
+2. Enable device type selection and placement on AR surfaces
+3. Implement network graph state management
+4. Add device connections and edge visualization

@@ -15,6 +15,7 @@ import './AboutPage.css';
 const TECH_STACK = [
   { name: 'React 18+', description: 'Component-based UI framework' },
   { name: 'Vite', description: 'Fast build tool and dev server' },
+  { name: 'Three.js', description: '3D rendering and WebXR integration' },
   { name: 'React Router', description: 'Client-side routing' },
   { name: 'Lucide React', description: 'Lightweight icon library' },
   { name: 'Vanilla CSS', description: 'Custom properties and design tokens' },
@@ -22,7 +23,13 @@ const TECH_STACK = [
 
 const IMPLEMENTED = [
   'Responsive landing page with project overview',
-  'AR Lab workspace layout (UI shell)',
+  'AR Lab workspace with real WebXR AR mode',
+  'WebXR immersive-ar session lifecycle',
+  'AR support detection and compatibility UI',
+  'WebXR hit testing for surface detection',
+  'Placement reticle on detected surfaces',
+  'Tap-to-place AR workspace anchor',
+  'Reset placement and Exit AR controls',
   'Mobile-first responsive design',
   'Dark and light theme with persistence',
   'Reusable UI component library',
@@ -32,14 +39,12 @@ const IMPLEMENTED = [
 ];
 
 const PLANNED = [
-  { feature: 'WebXR AR session management', phase: 2 },
-  { feature: 'Camera-based plane detection', phase: 2 },
-  { feature: 'Hit testing and surface anchoring', phase: 2 },
-  { feature: '3D device placement (Three.js / R3F)', phase: 2 },
-  { feature: 'Network graph state management', phase: 2 },
-  { feature: 'Device connections and edge creation', phase: 2 },
-  { feature: 'Shortest-path routing algorithm', phase: 3 },
-  { feature: 'Packet visualization and animation', phase: 3 },
+  { feature: '3D network device models (PC, Switch, Router, Server)', phase: 3 },
+  { feature: 'Device placement on AR surfaces', phase: 3 },
+  { feature: 'Network graph state management', phase: 3 },
+  { feature: 'Device connections and edge creation', phase: 3 },
+  { feature: 'Shortest-path routing algorithm', phase: 4 },
+  { feature: 'Packet visualization and animation', phase: 5 },
 ];
 
 export default function AboutPage() {
@@ -91,7 +96,7 @@ export default function AboutPage() {
           <div>
             <h2 className="about__section-title">
               <CheckCircle2 size={22} />
-              Implemented (Phase 1)
+              Implemented (Phase 1 & 2)
             </h2>
             <ul className="about__checklist">
               {IMPLEMENTED.map((item) => (
