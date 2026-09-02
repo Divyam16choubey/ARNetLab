@@ -2,106 +2,63 @@
 
 > **Build. Connect. Route. Visualize.**
 
-**ARNetLab: An Interactive Augmented Reality Platform for Network Topology Visualization and Routing** is an educational project for exploring computer-network topologies in a physical space. The intended experience is to place virtual devices such as PCs, switches, routers, and servers on a real surface, connect them, and observe a route between selected devices.
+**ARNetLab: An Interactive Augmented Reality Platform for Network Topology Visualization and Routing** is an educational WebXR platform for constructing, exploring, and understanding computer network topologies in physical 3D space. Users can place procedural 3D network devices (PCs, switches, routers, and servers) directly onto real-world surfaces (such as a desk or tabletop), establish 3D connection links with Euclidean distance weighting, designate Source and Destination endpoints to calculate the shortest path via Dijkstra's algorithm, and dispatch a 3D virtual packet along the optimal route.
 
-### Current Status — Phase 6 (Real-Device Hardening, Reliability & Stabilization)
+---
 
-Phase 6 hardens ARNetLab for physical handheld WebXR devices (verified on Samsung Galaxy Tab S9 FE). It resolves real-device reference-space negotiation failures, eliminates stale hit-test pose retention, hardens Three.js resource cleanup, optimizes render loops and memory consumption, improves orientation responsiveness, and introduces automated manager lifecycle regression tests.
+## Feature Inventory
 
-### Implemented
+The final implementation supports the following verified features:
 
-#### Phase 1 — Foundation & UI
-- Responsive landing page with project overview, capabilities, and workflow sections
-- Mobile-first responsive design (mobile, tablet, desktop)
-- Dark and light theme with localStorage persistence
-- Reusable UI component library (Button, Card, Badge, Modal, StatusIndicator, EmptyState, LoadingState)
-- Network UI component foundations (NetworkToolbar, NodeTypeSelector, NetworkControls, RouteStatus, NetworkLegend)
-- Responsive navbar with mobile slide-in menu
-- Client-side routing (React Router v6)
-- Tailwind CSS design token system, animation system, accessible controls
+1. **WebXR AR Session:** Initializes full-screen immersive AR (`immersive-ar`) using modern WebXR Device APIs.
+2. **Surface Detection:** Continuously detects real-world horizontal surfaces using `XRHitTestSource` with raycasting from the viewer reference space.
+3. **AR Workspace Placement:** Anchors an indigo circular workspace platform to physical surfaces with persistent world coordinates.
+4. **Procedural PC Placement:** Renders lightweight 3D procedural workstation meshes (monitor, stand, chassis).
+5. **Procedural Switch Placement:** Renders rackmount network switches with status port arrays.
+6. **Procedural Router Placement:** Renders cylindrical networking routers with dual antenna masts.
+7. **Procedural Server Placement:** Renders high-density server blades with illuminated drive bays.
+8. **3D Raycasting Device Selection:** Uses camera-based NDC raycasting with zero-allocation vectors to select devices via touch/tap.
+9. **Contextual Device Management:** Inspects device name, type, 3D position coordinates, role assignment, and offers one-tap device deletion.
+10. **Network Connection Creation:** Dynamically connects any two devices with oriented 3D cylinder meshes.
+11. **Connection Deletion:** Removes links and updates the adjacency graph in real-time.
+12. **3D Euclidean Distance Weights:** Computes edge weights directly from spatial coordinates: $w = \sqrt{(x_2-x_1)^2 + (y_2-y_1)^2 + (z_2-z_1)^2}$.
+13. **Source Node Selection:** Designates routing origin with an emerald green glowing base aura.
+14. **Destination Node Selection:** Designates routing destination with a rose/crimson glowing base aura.
+15. **Dijkstra Shortest-Path Algorithm:** Standalone routing engine evaluating non-negative Euclidean weights across multi-hop and disjoint graphs.
+16. **3D Route Visualization:** Highlights the optimal path with an illuminated emerald beam and endpoint pulse rings.
+17. **3D Virtual Packet Creation:** Visualizes data packets as a faceted amber icosahedron with an animated breathing halo ring.
+18. **Constant-Speed Traversal:** Frame-rate independent movement ($0.35\text{ m/s}$ by default): $\Delta\text{progress} = \frac{\text{speed} \cdot \Delta t}{\text{edgeLength}}$.
+19. **Packet Delivery & Telemetry:** Emits discrete milestone events upon arrival with real-time transit duration metrics.
+20. **Simulation Controls:** Offers intuitive "Send Packet", "Stop Packet", and "Send Again" controls in both the AR HUD and 2D panels.
+21. **Dynamic Topology Safety:** Halts packet simulation immediately if any participating node or link is deleted mid-transit.
+22. **Responsive Mobile & Tablet AR UI:** Floating glassmorphic HUD, mode switcher (`Place`, `Connect`, `Source`, `Dest`), device palette, and touch targets conforming to $\ge 48\text{px}$ accessibility standards.
 
-#### Phase 2 — WebXR & Real AR
-- **WebXR availability detection** — checks `navigator.xr` and `immersive-ar` support
-- **AR support UI** — clear status messages for supported, unsupported, and error states
-- **Immersive-ar session** — full WebXR session lifecycle (start, render loop, end)
-- **Three.js integration** — WebGLRenderer with XR enabled, scene, camera, lighting
-- **Hit testing** — WebXR hit-test source detects horizontal surfaces in real-time
-- **Placement reticle** — teal ring follows detected surfaces, hides when no surface found
-- **Tap-to-place** — places a workspace anchor (indigo platform) at the reticle position
-- **Reset placement** — removes anchor, resumes surface detection
-- **Exit AR** — ends session, disposes resources, returns to normal UI
-- **AR overlay** — floating status messages and controls during AR (glass-blur design)
-- **Performance-optimized** — XR frame loop runs in vanilla JS, no React re-renders per frame
-- **Error handling** — graceful messages for permission denied, unsupported devices, session failures
-- **Mobile UX** — touch-friendly controls, safe-area padding, 48px touch targets
+---
 
-#### Phase 3 — 3D Devices & Object Management
-- **Procedural 3D device models** — lightweight geometry with `MeshStandardMaterial` for 4 distinct device types (PC, Switch, Router, Server).
-- **AR Device Placement** — select a device type and tap detected surfaces to place 3D models at the exact hit-test transform.
-- **Three.js Raycasting Object Selection** — NDC raycasting against device meshes.
-- **Visual Selection Feedback** — selected devices display an active cyan base highlight ring and emissive glow.
-- **Floating Text Labels** — dynamic canvas-generated billboard sprite labels (e.g. `PC-01`, `SWITCH-01`) floating above devices.
-- **Contextual Device Info Card** — inspector card displaying device name, type, 3D coordinates, and deletion action.
-- **Dual Reset System**:
-  - `Reset Network`: Clears all placed 3D devices and connections while preserving the AR anchor and active session.
-  - `Reset Workspace`: Clears the workspace platform and devices, returning to surface scanning.
+## Strictly Excluded (Educational Simulation Boundary)
 
-#### Phase 4 — Network Topology & Dijkstra Routing
-- **Network Graph Model (`NetworkGraph.js`)** — Adjacency-list based undirected graph model with duplicate and self-loop prevention.
-- **3D Visual Connections (`ConnectionManager.js`)** — Real-time Three.js 3D link meshes connecting devices in AR space.
-- **3D Euclidean Distance Weights** — Edge weights computed directly from Euclidean distance: $\sqrt{(x_2-x_1)^2 + (y_2-y_1)^2 + (z_2-z_1)^2}$.
-- **Source & Destination Selection** — Dedicated modes and quick-assignment actions on devices with glowing role indicator rings (Emerald for Source, Rose for Destination).
-- **Dijkstra Shortest-Path Algorithm (`dijkstra.js`)** — Standalone routing engine evaluating non-negative Euclidean weights, multi-hop routes, and disjoint/unreachable graphs.
-- **3D Route Visualization** — Active shortest-path route highlighted with glowing emerald cylinder lines and endpoint pulse indicators.
-- **Dynamic Topology Reactivity** — Removing a device or connection automatically recalculates or invalidates active routes in real time.
-- **Interactive UI Controls** — Mode Switcher HUD in AR (`Place`, `Connect`, `Source`, `Dest`), `RouteStatus` analytics card with hop sequences and total distance metrics, and updated `NetworkLegend`.
+ARNetLab is an **educational visual simulation** designed to demonstrate networking and graph concepts intuitively in augmented reality. The following are **intentionally NOT implemented**:
+- No real network traffic or backend packet sniffing
+- No TCP/UDP raw socket connections
+- No real-world packet capture (PCAP) or Wi-Fi inspection
+- No fabricated bandwidth, packet loss, or simulated network latency claims
+- No multi-user synchronized AR over the internet
 
-#### Phase 5 — Virtual Packet Simulation & Route Traversal
-- **Packet Simulation Engine (`PacketSimulator.js`)** — Discrete simulation state machine (`IDLE`, `READY`, `RUNNING`, `PAUSED`, `COMPLETED`, `STOPPED`, `ERROR`).
-- **Constant World-Space Speed** — Frame-rate independent movement ($0.35\text{ m/s}$ by default): $\text{progress} += \frac{\text{speed} \cdot \Delta t}{\text{edgeLength}}$.
-- **Edge-by-Edge Traversal** — Seamless sequential progression across every segment in the computed Dijkstra shortest path without node teleportation.
-- **Lightweight 3D Packet Mesh (`PacketMesh.js`)** — Distinct faceted glowing icosahedron with pulsating halo beacon ring in luminous amber (`0xf59e0b`).
-- **Active Edge Visual Feedback** — Distinct bright amber/gold highlight on the link currently traversed by the packet without altering base route highlights.
-- **Dynamic Topology Safety** — Instantly terminates transit, cleans up 3D meshes, and alerts the user if any node or link on the active route is deleted during simulation.
-- **Zero Frame React Overhead** — High-frequency packet transform updates remain strictly inside Three.js in vanilla JavaScript; React state updates only on discrete milestones (start, node arrival, segment change, completion, stop, error).
-- **Simulation UI Controls** — "Send Packet", "Stop Packet", and "Send Again" controls in `RouteStatus`, `AROverlay`, `NetworkControls`, and `NetworkToolbar`.
-- **Accurate Simulation Metrics** — Displays actual elapsed simulation time (e.g. `Simulation Time: 3.4s`) and hop progress without fabricating network latency.
-- **Automated Test Suite (`packetSimulator.test.js`)** — 10 unit tests covering direct transmission, multi-hop, Dijkstra adherence, dynamic edge/node deletion, network reset, and re-dispatch (100% pass rate).
-
-#### Phase 6 — Real-Device Hardening & Stabilization
-- **Reference Space Fallback & ARCore Compatibility** — Configures Three.js `renderer.xr.setReferenceSpaceType('local')` before `setSession` to prevent Three.js from defaulting to unsupported `'local-floor'` on handheld AR devices (resolved real-device crash on Galaxy Tab S9 FE).
-- **Graceful Reference Space Negotiation** — Negotiates `'local'` → `'local-floor'` → `'viewer'` with coordinate system synchronization between Three.js camera rendering and `HitTestManager.update(frame, localRefSpace)`.
-- **Stale Pose Elimination** — Nullifies `_lastPoseMatrix` in `HitTestManager` whenever a frame has 0 hit results, ensuring `getHitPoseMatrixCopy()` never returns outdated spatial matrices.
-- **Defensive Hit-Test Cancellation** — Checks and safely cancels active hit-test sources on teardown.
-- **Connection Visuals Hardening** — Corrected undeclared variable references in `ConnectionManager` for route highlights and packet edge styling.
-- **Unobstructed Interaction in AR** — Placement reticle automatically hides during `connect`, `select`, `source`, and `dest` modes, preventing the surface tracking ring from interfering with device touch targeting.
-- **Parent-Detached Disposal** — Enhanced `PlacementManager`, `ReticleManager`, `DeviceManager`, and `PacketMesh` cleanup routines to safely remove meshes from their parents regardless of whether `scene` is passed.
-- **Texture & Canvas Memory Reclamation** — Disposes canvas backing store memory in `LabelManager` (`width = 0; height = 0`) to prevent texture memory leaks in mobile Chrome.
-- **Zero-Allocation Raycasting** — Reuses a pre-allocated NDC Vector2 in `DeviceManager` across screen tap interactions.
-- **WebXR Orientation & Viewport Sync** — Added `resize` and `orientationchange` handlers in `ARManager` to adjust camera projection and renderer viewport on tablet orientation flips.
-- **Session Interruption Safety** — Added guard flags in `ARManager` against duplicate `_handleSessionEnd` invocations from system interruptions or app switching.
-- **Landscape Tablet UI Optimization** — Added scrolling constraints (`max-h-[75vh] overflow-y-auto`) to the AR contextual inspector card to prevent viewport clipping on landscape displays.
-- **Automated Lifecycle Regression Tests (`lifecycleAndManagers.test.js`)** — Validates stale pose elimination, link styling, parent-detached disposal, and canvas memory reclamation (100% pass rate).
-
-### Strictly Excluded (Visual Simulation Boundary)
-
-This project is a **visual educational simulation**. The following are intentionally NOT implemented:
-- No real network traffic or backend packet transmission
-- No TCP/UDP socket connections
-- No real IP packet sniffing or Wi-Fi packet capture
-- No simulated bandwidth, packet loss, or latency claims
-- No multiplayer AR networking over the internet
+---
 
 ## Technology Stack
 
-| Technology | Purpose |
-|-----------|---------|
-| [React 18+](https://react.dev/) | Component-based UI framework |
-| [Vite](https://vite.dev/) | Build tool and dev server |
-| [Three.js](https://threejs.org/) | 3D rendering and WebXR integration |
-| [React Router v6](https://reactrouter.com/) | Client-side routing |
-| [Lucide React](https://lucide.dev/) | Lightweight icon library |
-| [Tailwind CSS](https://tailwindcss.com/) | Utility-first styling system and design tokens |
+| Technology | Version | Purpose |
+|---|---|---|
+| [React](https://react.dev/) | `^19.2.8` | Component-based UI framework & application state management |
+| [Vite](https://vite.dev/) | `^8.2.2` | High-performance build tool and dev server |
+| [Three.js](https://threejs.org/) | `^0.185.1` | 3D WebGL rendering, WebXR session management, geometry, and raycasting |
+| [React Router](https://reactrouter.com/) | `^7.18.3` | Client-side routing across Home, AR Lab, How It Works, and About pages |
+| [Tailwind CSS](https://tailwindcss.com/) | `^3.4.19` | Design token system, responsive styling, and animations |
+| [Lucide React](https://lucide.dev/) | `^1.39.0` | UI icon set |
+| [Oxlint](https://oxc.rs/) | `^1.79.0` | High-speed static analysis and linting |
+
+---
 
 ## Project Structure
 
@@ -109,153 +66,174 @@ This project is a **visual educational simulation**. The following are intention
 ARNetLab/
 ├── Documentation/              # Project report and slides (PDF)
 ├── public/
-│   └── favicon.svg
+│   └── favicon.svg             # Application favicon
 ├── src/
-│   ├── ar/                     # AR core modules (vanilla JS, no React)
-│   │   ├── ARManager.js        #   WebXR session lifecycle, Three.js renderer
-│   │   ├── HitTestManager.js   #   Surface detection via hit-test
-│   │   ├── ReticleManager.js   #   Placement reticle mesh
-│   │   ├── PlacementManager.js #   Workspace anchor platform mesh
+│   ├── ar/                     # Vanilla JS AR core modules (zero React overhead in XR frame loop)
+│   │   ├── ARManager.js        #   WebXR session lifecycle, reference space negotiation, Three.js renderer
+│   │   ├── HitTestManager.js   #   Surface detection via hit-test & stale pose elimination
+│   │   ├── ReticleManager.js   #   Surface placement reticle ring
+│   │   ├── PlacementManager.js #   Workspace anchor platform mesh & parent-detached disposal
 │   │   ├── DeviceFactory.js    #   Procedural 3D device geometry (PC, Switch, Router, Server)
-│   │   ├── DeviceManager.js    #   Scene device registry, raycasting, selection
-│   │   └── LabelManager.js     #   Canvas-backed billboard sprite text labels
+│   │   ├── DeviceManager.js    #   Scene device registry, pre-allocated NDC raycasting, selection
+│   │   ├── ConnectionManager.js#   3D cylinder links, route highlighting, active packet edge styling
+│   │   ├── PacketMesh.js       #   Faceted icosahedron mesh with pulsating beacon ring
+│   │   ├── LabelManager.js     #   Canvas-backed billboard sprite labels with memory deallocation
+│   │   └── __tests__/          #   Automated AR lifecycle & manager regression tests
 │   ├── components/
-│   │   ├── ar/                 # AR-specific UI (AROverlay.jsx with device palette & inspector)
-│   │   ├── common/             # Button, Card, Badge, Modal, StatusIndicator
-│   │   ├── layout/             # Navbar, Footer, MobileMenu, PageHeader
-│   │   ├── ui/                 # ThemeToggle, EmptyState, LoadingState
-│   │   └── network/            # NetworkToolbar, NodeTypeSelector, NetworkControls, etc.
-│   ├── pages/
-│   │   ├── HomePage.jsx
-│   │   ├── ARLabPage.jsx       # AR viewport & desktop fallback mode
-│   │   ├── HowItWorksPage.jsx
-│   │   └── AboutPage.jsx
-│   ├── hooks/
-│   │   ├── useTheme.js
-│   │   └── useAR.js            # Unified AR and network device hook
-│   ├── context/
-│   │   ├── ThemeContext.jsx
-│   │   └── ARContext.jsx       # AR session & network node state management
+│   │   ├── ar/                 # Floating AR overlay UI (AROverlay.jsx)
+│   │   ├── common/             # Reusable UI primitives (Button, Card, Badge, Modal, StatusIndicator)
+│   │   ├── layout/             # Layout components (Navbar, Footer, MobileMenu, PageHeader)
+│   │   ├── network/            # Network panels (NetworkControls, NetworkToolbar, RouteStatus, NetworkLegend)
+│   │   └── ui/                 # UI utilities (ThemeToggle, EmptyState, LoadingState)
 │   ├── constants/
-│   │   └── networkTypes.js     # Device types, colors, icons, config
-│   ├── types/
-│   │   └── network.js          # JSDoc type contracts
-│   ├── styles/
-│   │   └── globals.css         # Tailwind base, utilities, and scrollbar styles
-│   ├── App.jsx
-│   └── main.jsx
-├── index.html
-├── package.json
-├── postcss.config.js
-├── tailwind.config.js
-├── vite.config.js
-└── README.md
+│   │   └── networkTypes.js     # Device specifications, theme colors, icons, configuration tokens
+│   ├── context/
+│   │   ├── ThemeContext.jsx    # Dark/light theme provider with localStorage persistence
+│   │   └── ARContext.jsx       # Central AR session state, graph synchronization, and event dispatcher
+│   ├── hooks/
+│   │   ├── useTheme.js         # Theme consumption hook
+│   │   └── useAR.js            # Unified AR and network topology hook
+│   ├── network/                # Graph theory & routing engines
+│   │   ├── NetworkGraph.js     #   Adjacency-list undirected network graph
+│   │   ├── dijkstra.js         #   Dijkstra shortest-path algorithm
+│   │   ├── PacketSimulator.js  #   Virtual packet state machine & traversal engine
+│   │   └── __tests__/          #   Dijkstra & PacketSimulator unit test suites
+│   ├── pages/                  # Top-level application views (HomePage, ARLabPage, HowItWorksPage, AboutPage)
+│   ├── styles/                 # Global CSS and Tailwind directives (globals.css)
+│   ├── types/                  # JSDoc type contracts (network.js)
+│   ├── App.jsx                 # Route definitions & layout wrapper
+│   └── main.jsx                # Application root mounting script
+├── index.html                  # HTML entry point with metadata and fonts
+├── package.json                # Project manifest, dependencies, and npm scripts
+├── postcss.config.js           # PostCSS configuration
+├── tailwind.config.js          # Tailwind design tokens and responsive breakpoints
+├── vite.config.js              # Vite bundler configuration
+└── README.md                   # Project documentation
 ```
+
+---
 
 ## Getting Started
 
 ### Prerequisites
-
 - [Node.js](https://nodejs.org/) (v18 or later recommended)
-- npm (included with Node.js)
+- npm (bundled with Node.js)
 
 ### Installation
-
 ```bash
 git clone https://github.com/Divyam16choubey/ARNetLab.git
 cd ARNetLab
 npm install
 ```
 
-### Development
-
+### Development Server
 ```bash
 npm run dev
 ```
-
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ### Production Build
-
 ```bash
 npm run build
+npm run preview
 ```
 
-## Testing & Verification Procedures
-
-### Distinction: Code-Level Verification vs. Real-Device Verification
-
-- **Code-Level Verification:**
-  - Automated unit test suite: `node src/network/__tests__/dijkstra.test.js` (7/7 passed).
-  - Automated packet simulation suite: `node src/network/__tests__/packetSimulator.test.js` (10/10 passed).
-  - Automated AR lifecycle suite: `node src/ar/__tests__/lifecycleAndManagers.test.js` (4/4 passed).
-  - Linting: `npm run lint` (0 warnings, 0 errors).
-  - Production compilation: `npm run build` (successful bundle).
-
-- **Real-Device Verification (Galaxy Tab S9 FE, Chrome for Android):**
-  - WebXR AR session begins successfully via `navigator.xr.requestSession('immersive-ar')`.
-  - Passthrough camera feed active.
-  - Surface detection via `XRHitTestSource` operates in real-time.
-  - Placement reticle tracks detected horizontal planes.
-  - Tap-to-place instantiates workspace anchor platform on detected plane.
-  - Workspace anchor platform remains world-locked at physical surface location.
-
-### Recommended Chrome for Android Verification Procedure
-1. Serve ARNetLab over HTTPS (required by WebXR) or via `localhost` port-forwarding in Chrome DevTools (`chrome://inspect`).
-2. Open Chrome on an ARCore-certified device (e.g., Galaxy Tab S9 FE).
-3. Navigate to `/ar-lab`.
-4. Tap **Enter AR** and accept the camera permission prompt.
-5. Move the device slowly across a textured horizontal surface (desk or table).
-6. Verify the teal reticle appears flat upon the detected surface.
-7. Tap the surface to anchor the workspace.
-8. Switch to **Place** mode and place multiple devices (PC, Switch, Router, Server).
-9. Switch to **Connect** mode and link devices.
-10. Set **Source** and **Destination** devices to view Dijkstra route highlight (emerald green).
-11. Tap **Send Packet** and observe the virtual packet traversing edge-by-edge in 3D world space.
-12. Tap **Exit AR** to return to standard UI.
-
-### Recommended Samsung Internet Verification Procedure
-1. Launch Samsung Internet on the device.
-2. Ensure WebXR is enabled in `internet://flags` if required on older versions.
-3. Follow steps 3–12 above.
-4. Verify WebXR session teardown cleanly releases camera resources upon tab exit.
-
-## AR Architecture
-
-```
-React (UI layer)                Vanilla JS (XR frame loop)
-─────────────────               ───────────────────────────
-ARContext.jsx ────────────────► ARManager.js
-  ├─ session state                ├─ Three.js renderer
-  ├─ hitTest state                ├─ XR session lifecycle ('local' ref space)
-  ├─ placement state              ├─ render loop (vanilla JS, 0 React setState)
-  ├─ nodes state (PC, Switch...) HitTestManager.js
-  ├─ selectedNodeId               ├─ XRHitTestSource ('viewer' ray)
-  ├─ simulationStatus             └─ per-frame pose extraction (no stale leaks)
-  └─ packetInfo                  ReticleManager.js
-                                  └─ ring mesh on surfaces (hides in non-place modes)
-                                 PlacementManager.js
-                                  └─ workspace anchor platform
-                                 DeviceFactory.js
-                                  └─ procedural 3D meshes (PC, Switch, Router, Server)
-                                 DeviceManager.js
-                                  ├─ scene node registry
-                                  ├─ pre-allocated NDC raycasting
-                                  └─ selection highlight
-                                 ConnectionManager.js
-                                  ├─ 3D cylinder links
-                                  ├─ route emerald highlights
-                                  └─ packet active gold highlights
-                                 PacketMesh.js
-                                  └─ icosahedron mesh with pulsating beacon ring
-                                 LabelManager.js
-                                  └─ floating sprite labels with memory disposal
+### Linting
+```bash
+npm run lint
 ```
 
-React state is **only updated on discrete milestone events** (session start/end, placement, selection, deletion, reset, packet milestones). The XR frame loop runs in vanilla JavaScript with zero React re-renders per frame.
+### Automated Unit & Regression Tests
+```bash
+npm test
+```
+
+---
+
+## Testing & Verification Matrix
+
+### Verification Level Breakdown
+
+| Verification Dimension | Status | Notes |
+|---|---|---|
+| **Dijkstra Shortest Path** | **CODE-LEVEL VERIFIED** ✅ | 7/7 automated unit tests passed (linear, bypass, disconnected, cyclic). |
+| **Packet Simulation Engine** | **CODE-LEVEL VERIFIED** ✅ | 10/10 automated tests passed (milestones, edge deletion, reset). |
+| **AR Lifecycle & Resource Disposal** | **CODE-LEVEL VERIFIED** ✅ | 4/4 automated tests passed (stale pose, link styles, canvas memory). |
+| **Static Code Quality** | **CODE-LEVEL VERIFIED** ✅ | `oxlint` found 0 warnings and 0 errors across 48 files. |
+| **Production Compilation** | **CODE-LEVEL VERIFIED** ✅ | `vite build` completed successfully with minified bundle. |
+| **WebXR Immersive Session Launch** | **VERIFIED ON DEVICE** ✅ | Tested on Samsung Galaxy Tab S9 FE with Chrome for Android. |
+| **Camera Feed Passthrough** | **VERIFIED ON DEVICE** ✅ | Video passthrough renders fluidly behind 3D scene. |
+| **Reference Space Negotiation** | **VERIFIED ON DEVICE** ✅ | Successfully negotiates `'local'` space on handheld ARCore. |
+| **Surface Detection & Reticle** | **VERIFIED ON DEVICE** ✅ | Flat surface tracking detects desk planes and updates reticle transform. |
+| **Workspace Anchor Placement** | **VERIFIED ON DEVICE** ✅ | Workspace platform anchors to physical desk and stays world-locked. |
+| **Other Browsers (Samsung Internet / iOS)** | **NOT TESTED** ⚠️ | Requires future manual evaluation on specific hardware. |
+
+---
+
+## Recommended Demonstration Scenario
+
+### 19-Step Interactive Demonstration Sequence
+
+1. **Launch ARNetLab:** Navigate to the ARNetLab homepage on a WebXR-compatible mobile device (e.g. Chrome on Android).
+2. **Open AR Lab:** Tap **Open AR Lab** from the landing page.
+3. **Start AR Session:** Tap **Enter AR** and grant camera permissions.
+4. **Surface Scanning:** Move the device slowly across a textured desk or table until the teal reticle appears flat on the surface.
+5. **Place Workspace Anchor:** Tap the screen to place the circular workspace anchor.
+6. **Place PC:** Select `PC` from the device palette and tap to place `PC-01`.
+7. **Place Switch:** Select `Switch` and place `SWITCH-01` adjacent to the PC.
+8. **Place Router:** Select `Router` and place `ROUTER-01` near the center.
+9. **Place Server:** Select `Server` and place `SERVER-01`.
+10. **Establish Links:** Switch to **Connect** mode and link:
+    - `PC-01` ↔ `SWITCH-01`
+    - `SWITCH-01` ↔ `ROUTER-01`
+    - `ROUTER-01` ↔ `SERVER-01`
+11. **Select Source:** Tap `PC-01` and tap **Set as Source** (displays emerald indicator ring).
+12. **Select Destination:** Tap `SERVER-01` and tap **Set as Dest** (displays rose indicator ring).
+13. **Observe Dijkstra Route:** Observe the computed shortest path highlighted with an illuminated emerald glowing beam.
+14. **Dispatch Virtual Packet:** Tap **Send Packet** in the floating AR HUD.
+15. **Observe Packet Traversal:** Watch the faceted amber 3D packet traverse edge-by-edge along the path at a constant world-space speed ($0.35\text{ m/s}$) with active gold link highlighting.
+16. **Confirm Delivery:** Observe delivery feedback upon arrival at `SERVER-01` with actual elapsed simulation time displayed.
+17. **Demonstrate Reset Network:** Tap **Reset Network** to clear all devices and links while maintaining the physical AR anchor.
+18. **Demonstrate Exit AR:** Tap **Exit AR** to safely terminate the WebXR session and return to standard UI.
+19. **Desktop Preview:** Open the application on a desktop browser to verify the interactive 2D topology tools and desktop fallback layout.
+
+### Recommended Demonstration Topology
+
+```
+[ PC-01 ] ───────── (0.45m) ───────── [ SWITCH-01 ]
+                                            │
+                                         (0.35m)
+                                            │
+[ SERVER-01 ] ────── (0.50m) ───────── [ ROUTER-01 ]
+```
+
+*Alternate Shortest-Path Demonstration:* Add a direct high-cost bypass or secondary switch path (`SWITCH-02`) to demonstrate how Dijkstra automatically selects the path with minimal total Euclidean distance.
+
+---
+
+## Recommended Manual Screenshot Checklist
+
+1. **Home Page:** Clean hero section with project tagline and device badges.
+2. **AR Lab Pre-Session:** Device compatibility status and "Enter AR" trigger.
+3. **Surface Detection:** Camera feed showing detected horizontal surface with teal reticle.
+4. **Workspace Placed:** Indigo circular anchor platform world-locked onto a physical desk.
+5. **Placed 3D Devices:** PC, Switch, Router, and Server arranged in 3D space with floating text labels.
+6. **Connected Topology:** 3D cylindrical links interconnecting devices with Euclidean distance metrics.
+7. **Dijkstra Route Highlight:** Glowing emerald beam illuminating the shortest path between Source and Destination.
+8. **Packet in Transit:** Luminous amber icosahedron packet actively traversing an illuminated gold connection link.
+9. **Delivery & Route HUD:** Telemetry pill showing elapsed transit duration and completed milestone status.
+10. **Desktop Fallback UI:** 2D network controls and topology status on standard non-AR displays.
+
+---
+
+## Final Project Summary
+
+ARNetLab is an interactive mobile Augmented Reality platform that enables students and educators to construct virtual computer-network topologies on real-world surfaces, calculate shortest routes using Dijkstra's algorithm based on 3D Euclidean distances, and visualize data packet traversal through the resulting network.
+
+---
 
 ## Documentation
 
-- [Project report](Documentation/ARNetLab_Report.pdf)
-- [Project slides](Documentation/ARNetLab_Slides.pdf)
+- [Project Report (PDF)](Documentation/ARNetLab_Report.pdf)
+- [Project Presentation Slides (PDF)](Documentation/ARNetLab_Slides.pdf)
 

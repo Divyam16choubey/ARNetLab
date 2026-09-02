@@ -142,7 +142,7 @@ export default function ARLabPage() {
                   AR Lab
                 </span>
                 <Badge variant={session === 'error' ? 'warning' : 'info'}>
-                  Phase 6 — Hardening &amp; Stabilization
+                  Phase 7 — Finalized &amp; Ready
                 </Badge>
               </div>
             </div>
