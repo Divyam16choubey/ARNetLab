@@ -2,7 +2,7 @@ import { useContext } from 'react';
 import { ARContext } from '../context/ARContext';
 
 /**
- * Hook to consume AR and Network Device state and actions.
+ * Hook to consume AR, Network Topology, and Routing state and actions.
  * @returns {{
  *   support: 'checking'|'supported'|'unsupported',
  *   session: 'idle'|'starting'|'active'|'ending'|'error',
@@ -11,15 +11,29 @@ import { ARContext } from '../context/ARContext';
  *   errorMessage: string|null,
  *   statusMessage: string|null,
  *   nodes: Array<{ id: string, type: 'PC'|'SWITCH'|'ROUTER'|'SERVER', label: string, position: {x: number, y: number, z: number}, color: string }>,
+ *   edges: Array<{ id: string, source: string, target: string, weight: number }>,
  *   selectedNodeId: string|null,
+ *   selectedEdgeId: string|null,
  *   selectedDeviceType: 'PC'|'SWITCH'|'ROUTER'|'SERVER',
+ *   activeMode: 'place'|'select'|'connect'|'source'|'destination',
+ *   connectSourceNodeId: string|null,
+ *   sourceNodeId: string|null,
+ *   destinationNodeId: string|null,
+ *   route: { reachable: boolean, path: string[], edgeIds: string[], totalWeight: number }|null,
  *   startAR: (canvas: HTMLCanvasElement) => Promise<void>,
  *   endAR: () => Promise<void>,
  *   onTap: (screenX?: number, screenY?: number) => void,
+ *   setActiveMode: (mode: 'place'|'select'|'connect'|'source'|'destination') => void,
  *   selectDeviceType: (type: 'PC'|'SWITCH'|'ROUTER'|'SERVER') => void,
  *   selectNode: (nodeId: string|null) => void,
+ *   selectEdge: (edgeId: string|null) => void,
  *   deleteNode: (nodeId: string) => void,
  *   deleteSelectedNode: () => void,
+ *   createConnection: (sourceId: string, targetId: string) => any,
+ *   deleteConnection: (edgeId: string) => void,
+ *   setSourceNode: (nodeId: string|null) => void,
+ *   setDestinationNode: (nodeId: string|null) => void,
+ *   recalculateRoute: () => void,
  *   resetNetwork: () => void,
  *   resetPlacement: () => void,
  * }}
@@ -31,4 +45,5 @@ export function useAR() {
   }
   return context;
 }
+
 

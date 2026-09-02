@@ -33,20 +33,25 @@ const IMPLEMENTED = [
   'Three.js raycasting object selection with glow highlight',
   'Auto-generated floating text labels (e.g. PC-01, ROUTER-01)',
   'Contextual device inspector card with live deletion',
+  'NetworkGraph adjacency list undirected graph model',
+  'Interactive 3D visual line connections between devices',
+  'Automatic 3D Euclidean distance edge weight calculation',
+  'Source and Destination device role selection with glowing indicators',
+  'Dijkstra shortest-path routing algorithm with dynamic edge weight evaluation',
+  'Real-time 3D AR route highlighting with emerald glowing aura',
+  'Dynamic topology updates (route invalidation/recalculation on node/edge deletion)',
   'Dual reset system: Reset Network vs Reset Workspace',
   'Mobile-first touch controls with safe-area padding',
   'Dark and light theme with persistence',
-  'Reusable UI component library',
+  'Reusable UI component library with Tailwind CSS styling',
   'Page routing (Home, AR Lab, How It Works, About)',
 ];
 
 const PLANNED = [
-  { feature: 'Network graph representation and node connections', phase: 4 },
-  { feature: 'Edge weight calculation (Euclidean 3D distance)', phase: 4 },
-  { feature: 'Dijkstra shortest-path routing algorithm', phase: 4 },
-  { feature: 'Source and destination node route highlighting', phase: 4 },
-  { feature: 'Packet visualization and hop animation', phase: 5 },
-  { feature: 'Dynamic topology updates and route recalculation', phase: 5 },
+  { feature: 'Virtual packet 3D mesh and visual representation', phase: 5 },
+  { feature: 'Real-time animated packet traversal along shortest path', phase: 5 },
+  { feature: 'Packet transmission simulation and controls (Play, Pause, Speed)', phase: 5 },
+  { feature: 'Hop-by-hop packet processing visualization', phase: 5 },
 ];
 
 export default function AboutPage() {

@@ -11,6 +11,11 @@ import {
   Crosshair,
   AlertCircle,
   Layers,
+  Link2,
+  Circle,
+  Target,
+  Route,
+  Plus,
 } from 'lucide-react';
 import { useAR } from '../../hooks/useAR';
 import { NODE_TYPE_LIST } from '../../constants/networkTypes';
@@ -23,8 +28,8 @@ const ICON_MAP = {
 };
 
 /**
- * AR-mode floating overlay — status messages, device palette,
- * contextual device inspector, and controls rendered on top of the XR canvas.
+ * AR-mode floating overlay — status messages, mode selector, device palette,
+ * contextual inspector, connection assistant, and route HUD.
  */
 export default function AROverlay() {
   const {
@@ -34,12 +39,21 @@ export default function AROverlay() {
     errorMessage,
     statusMessage,
     nodes,
+    edges,
     selectedNodeId,
     selectedDeviceType,
+    activeMode,
+    connectSourceNodeId,
+    sourceNodeId,
+    destinationNodeId,
+    route,
     endAR,
+    setActiveMode,
     selectDeviceType,
     selectNode,
     deleteSelectedNode,
+    setSourceNode,
+    setDestinationNode,
     resetNetwork,
     resetPlacement,
   } = useAR();
@@ -47,6 +61,7 @@ export default function AROverlay() {
   if (session !== 'active' && session !== 'starting') return null;
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
+  const connectSourceNode = nodes.find((n) => n.id === connectSourceNodeId);
 
   // Derive top banner icon and text
   let statusIcon = <ScanLine size={18} />;
@@ -65,10 +80,21 @@ export default function AROverlay() {
     }
   } else {
     // Placement is placed
-    if (selectedNode) {
-      statusIcon = <CheckCircle2 size={18} />;
+    if (activeMode === 'connect') {
+      statusIcon = <Link2 size={18} className="text-primary-400 animate-pulse" />;
+      defaultText = connectSourceNode
+        ? `Tap 2nd device to link with ${connectSourceNode.label}`
+        : 'Connect: Tap 1st device to link';
+    } else if (activeMode === 'source') {
+      statusIcon = <Circle size={18} className="text-emerald-400" />;
+      defaultText = 'Source Mode: Tap a device to set as Source';
+    } else if (activeMode === 'destination') {
+      statusIcon = <Target size={18} className="text-rose-400" />;
+      defaultText = 'Destination Mode: Tap a device to set as Destination';
+    } else if (selectedNode) {
+      statusIcon = <CheckCircle2 size={18} className="text-sky-400" />;
       defaultText = `${selectedNode.label} selected`;
-    } else if (hitTest === 'ready') {
+    } else if (hitTest === 'ready' && activeMode === 'place') {
       statusIcon = <Crosshair size={18} />;
       defaultText = `Tap surface to place ${selectedDeviceType}`;
     } else {
@@ -84,24 +110,94 @@ export default function AROverlay() {
       className="fixed inset-0 z-overlay pointer-events-none flex flex-col justify-between p-[env(safe-area-inset-top,16px)_16px_env(safe-area-inset-bottom,16px)] select-none"
       aria-live="polite"
     >
-      {/* Top status bar & node counter */}
+      {/* Top Section: Status Bar & Badges */}
       <div className="flex flex-col items-center gap-2 pt-2 pointer-events-auto">
-        <div className="inline-flex items-center gap-2 py-2 px-4 bg-black/75 text-white rounded-full text-xs sm:text-sm font-medium backdrop-blur-md animate-fade-in-down shadow-lg [&_svg]:shrink-0 [&_svg]:opacity-90 max-w-[90vw] truncate">
+        {/* Main Status Pill */}
+        <div className="inline-flex items-center gap-2 py-2 px-4 bg-black/80 text-white rounded-full text-xs sm:text-sm font-medium backdrop-blur-md animate-fade-in-down shadow-lg [&_svg]:shrink-0 max-w-[92vw] truncate border border-white/10">
           {statusIcon}
           <span className="truncate">{displayText}</span>
         </div>
 
-        {placement === 'placed' && nodes.length > 0 && (
-          <div className="inline-flex items-center gap-1.5 py-1 px-3 bg-neutral-900/80 text-neutral-300 rounded-full text-xs font-semibold backdrop-blur-md border border-white/10 animate-fade-in">
-            <Layers size={13} className="text-primary-400" />
-            <span>{nodes.length} {nodes.length === 1 ? 'Device' : 'Devices'} Placed</span>
+        {/* Counter & Topology Pill */}
+        {placement === 'placed' && (
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 py-1 px-3 bg-neutral-900/80 text-neutral-300 rounded-full text-xs font-semibold backdrop-blur-md border border-white/10 animate-fade-in">
+              <Layers size={13} className="text-primary-400" />
+              <span>{nodes.length} {nodes.length === 1 ? 'Device' : 'Devices'}</span>
+              <span className="text-neutral-500">•</span>
+              <span className="text-sky-400">{edges.length} {edges.length === 1 ? 'Link' : 'Links'}</span>
+            </div>
+
+            {route && route.reachable && (
+              <div className="inline-flex items-center gap-1.5 py-1 px-3 bg-emerald-950/80 text-emerald-300 rounded-full text-xs font-bold backdrop-blur-md border border-emerald-500/30 animate-fade-in">
+                <Route size={13} className="text-emerald-400" />
+                <span>Route: {route.totalWeight.toFixed(2)}m ({route.path.length - 1} hops)</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Phase 4 Interaction Mode Switcher */}
+        {placement === 'placed' && (
+          <div className="flex items-center gap-1 p-1 bg-black/70 backdrop-blur-xl border border-white/15 rounded-2xl shadow-xl mt-1">
+            <button
+              className={`flex items-center gap-1 py-1.5 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer [touch-action:manipulation] ${
+                activeMode === 'place'
+                  ? 'bg-primary-500 text-white shadow-md'
+                  : 'text-neutral-300 hover:text-white hover:bg-white/10'
+              }`}
+              onClick={() => setActiveMode('place')}
+              aria-label="Place Device Mode"
+            >
+              <Plus size={14} />
+              <span>Place</span>
+            </button>
+
+            <button
+              className={`flex items-center gap-1 py-1.5 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer [touch-action:manipulation] ${
+                activeMode === 'connect'
+                  ? 'bg-sky-500 text-white shadow-md'
+                  : 'text-neutral-300 hover:text-white hover:bg-white/10'
+              }`}
+              onClick={() => setActiveMode(activeMode === 'connect' ? 'select' : 'connect')}
+              aria-label="Connect Mode"
+            >
+              <Link2 size={14} />
+              <span>Connect</span>
+            </button>
+
+            <button
+              className={`flex items-center gap-1 py-1.5 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer [touch-action:manipulation] ${
+                activeMode === 'source'
+                  ? 'bg-emerald-500 text-white shadow-md'
+                  : 'text-neutral-300 hover:text-white hover:bg-white/10'
+              }`}
+              onClick={() => setActiveMode(activeMode === 'source' ? 'select' : 'source')}
+              aria-label="Source Mode"
+            >
+              <Circle size={14} />
+              <span>Source</span>
+            </button>
+
+            <button
+              className={`flex items-center gap-1 py-1.5 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer [touch-action:manipulation] ${
+                activeMode === 'destination'
+                  ? 'bg-rose-500 text-white shadow-md'
+                  : 'text-neutral-300 hover:text-white hover:bg-white/10'
+              }`}
+              onClick={() => setActiveMode(activeMode === 'destination' ? 'select' : 'destination')}
+              aria-label="Destination Mode"
+            >
+              <Target size={14} />
+              <span>Dest</span>
+            </button>
           </div>
         )}
       </div>
 
-      {/* Center/Bottom Contextual Device Info Card (when a device is selected) */}
+      {/* Contextual Device Inspector Card (when device selected) */}
       {selectedNode && (
-        <div className="mx-auto w-full max-w-sm p-4 bg-neutral-950/90 text-white rounded-2xl backdrop-blur-xl border border-white/20 shadow-2xl animate-fade-in-up pointer-events-auto mb-2">
+        <div className="mx-auto w-full max-w-sm p-4 bg-neutral-950/92 text-white rounded-2xl backdrop-blur-xl border border-white/20 shadow-2xl animate-fade-in-up pointer-events-auto mb-2">
           <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
             <div className="flex items-center gap-2.5">
               <span
@@ -109,9 +205,21 @@ export default function AROverlay() {
                 style={{ backgroundColor: selectedNode.color }}
               />
               <div>
-                <h3 className="text-base font-bold tracking-tight text-white leading-tight">
-                  {selectedNode.label}
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold tracking-tight text-white leading-tight">
+                    {selectedNode.label}
+                  </h3>
+                  {sourceNodeId === selectedNode.id && (
+                    <span className="text-[10px] uppercase font-extrabold bg-emerald-500 text-white px-1.5 py-0.5 rounded">
+                      Source
+                    </span>
+                  )}
+                  {destinationNodeId === selectedNode.id && (
+                    <span className="text-[10px] uppercase font-extrabold bg-rose-500 text-white px-1.5 py-0.5 rounded">
+                      Dest
+                    </span>
+                  )}
+                </div>
                 <span className="text-xs text-neutral-400 font-medium">
                   Type: {selectedNode.type}
                 </span>
@@ -126,14 +234,41 @@ export default function AROverlay() {
             </button>
           </div>
 
+          {/* Quick Routing & Connection Assignment Actions */}
+          <div className="grid grid-cols-2 gap-2 py-3 border-b border-neutral-800/80">
+            <button
+              className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer [touch-action:manipulation] ${
+                sourceNodeId === selectedNode.id
+                  ? 'bg-emerald-500 text-white border-emerald-400'
+                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 active:bg-emerald-500 active:text-white'
+              }`}
+              onClick={() => setSourceNode(sourceNodeId === selectedNode.id ? null : selectedNode.id)}
+            >
+              <Circle size={14} />
+              <span>{sourceNodeId === selectedNode.id ? 'Unset Source' : 'Set as Source'}</span>
+            </button>
+
+            <button
+              className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer [touch-action:manipulation] ${
+                destinationNodeId === selectedNode.id
+                  ? 'bg-rose-500 text-white border-rose-400'
+                  : 'bg-rose-500/15 text-rose-300 border-rose-500/30 active:bg-rose-500 active:text-white'
+              }`}
+              onClick={() => setDestinationNode(destinationNodeId === selectedNode.id ? null : selectedNode.id)}
+            >
+              <Target size={14} />
+              <span>{destinationNodeId === selectedNode.id ? 'Unset Dest' : 'Set as Dest'}</span>
+            </button>
+          </div>
+
           <div className="py-2.5 text-xs text-neutral-400 flex items-center justify-between">
-            <span>Position in space:</span>
+            <span>Position:</span>
             <span className="font-mono text-neutral-300 text-[11px]">
               X: {selectedNode.position?.x?.toFixed(2) ?? '0.00'} | Y: {selectedNode.position?.y?.toFixed(2) ?? '0.00'} | Z: {selectedNode.position?.z?.toFixed(2) ?? '0.00'}
             </span>
           </div>
 
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-2 pt-1">
             <button
               className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold bg-red-500/20 text-red-300 border border-red-500/40 active:bg-red-500 active:text-white transition-all cursor-pointer min-h-[42px] [touch-action:manipulation]"
               onClick={deleteSelectedNode}
@@ -152,10 +287,10 @@ export default function AROverlay() {
         </div>
       )}
 
-      {/* Floating Network Device Palette (when workspace is placed and no device card is blocking) */}
-      {placement === 'placed' && !selectedNode && (
+      {/* Floating Device Palette (when in place mode and no device card open) */}
+      {placement === 'placed' && activeMode === 'place' && !selectedNode && (
         <div className="flex flex-col items-center gap-2 pointer-events-auto mb-2">
-          <div className="flex items-center gap-1.5 p-1.5 bg-black/80 backdrop-blur-xl border border-white/15 rounded-2xl shadow-2xl animate-fade-in-up max-w-[95vw] overflow-x-auto">
+          <div className="flex items-center gap-1.5 p-1.5 bg-black/85 backdrop-blur-xl border border-white/15 rounded-2xl shadow-2xl animate-fade-in-up max-w-[95vw] overflow-x-auto">
             {NODE_TYPE_LIST.map(({ type, label, color, icon }) => {
               const Icon = ICON_MAP[icon];
               const isSelected = selectedDeviceType === type;
@@ -193,13 +328,13 @@ export default function AROverlay() {
 
       {/* Bottom controls bar */}
       <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 pb-3 pointer-events-auto">
-        {/* Reset Network (clears devices only) */}
+        {/* Reset Network (clears devices & connections only) */}
         {placement === 'placed' && nodes.length > 0 && (
           <button
             className="flex items-center gap-1.5 py-2.5 px-4 rounded-full text-xs font-semibold border border-amber-500/40 bg-amber-500/20 text-amber-200 active:bg-amber-500 active:text-white cursor-pointer backdrop-blur-md transition-all min-h-[44px] [touch-action:manipulation]"
             onClick={resetNetwork}
-            aria-label="Reset all network devices"
-            title="Remove all network devices while keeping the AR anchor"
+            aria-label="Reset network devices and connections"
+            title="Remove all network devices and connections while keeping the AR anchor"
           >
             <RotateCcw size={16} />
             <span>Reset Network</span>
@@ -240,3 +375,4 @@ export default function AROverlay() {
     </div>
   );
 }
+

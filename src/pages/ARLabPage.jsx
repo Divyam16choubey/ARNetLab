@@ -142,7 +142,7 @@ export default function ARLabPage() {
                   AR Lab
                 </span>
                 <Badge variant={session === 'error' ? 'warning' : 'info'}>
-                  Phase 3 — 3D Network Devices
+                  Phase 4 — Topology &amp; Routing
                 </Badge>
               </div>
             </div>

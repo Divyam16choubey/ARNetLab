@@ -10,6 +10,9 @@ import { HitTestManager } from '../ar/HitTestManager';
 import { ReticleManager } from '../ar/ReticleManager';
 import { PlacementManager } from '../ar/PlacementManager';
 import { DeviceManager } from '../ar/DeviceManager';
+import { ConnectionManager } from '../ar/ConnectionManager';
+import { NetworkGraph } from '../network/NetworkGraph';
+import { findShortestPath } from '../network/dijkstra';
 import { NODE_TYPE_CONFIG, NODE_TYPES } from '../constants/networkTypes';
 
 /**
@@ -18,6 +21,7 @@ import { NODE_TYPE_CONFIG, NODE_TYPES } from '../constants/networkTypes';
  * @typedef {'unavailable'|'searching'|'ready'} ARHitTestStatus
  * @typedef {'none'|'placed'} ARPlacementStatus
  * @typedef {'PC'|'SWITCH'|'ROUTER'|'SERVER'} DeviceType
+ * @typedef {'place'|'select'|'connect'|'source'|'destination'} InteractionMode
  */
 
 /** @type {React.Context} */
@@ -31,10 +35,19 @@ export function ARProvider({ children }) {
   const [placement, setPlacement] = useState(/** @type {ARPlacementStatus} */ ('none'));
   const [errorMessage, setErrorMessage] = useState(/** @type {string|null} */ (null));
 
-  // ---- Network Device State ----
+  // ---- Network Device & Topology State ----
   const [nodes, setNodes] = useState([]);
+  const [edges, setEdges] = useState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [selectedDeviceType, setSelectedDeviceType] = useState(NODE_TYPES.PC);
+
+  // ---- Phase 4: Interaction Modes & Routing State ----
+  const [activeMode, setActiveModeState] = useState(/** @type {InteractionMode} */ ('place'));
+  const [connectSourceNodeId, setConnectSourceNodeId] = useState(null);
+  const [sourceNodeId, setSourceNodeId] = useState(null);
+  const [destinationNodeId, setDestinationNodeId] = useState(null);
+  const [route, setRoute] = useState(null);
   const [statusMessage, setStatusMessage] = useState(null);
 
   // ---- Refs for AR managers & immediate state access ----
@@ -43,14 +56,26 @@ export function ARProvider({ children }) {
   const reticleManagerRef = useRef(null);
   const placementManagerRef = useRef(null);
   const deviceManagerRef = useRef(null);
+  const connectionManagerRef = useRef(null);
+  const graphRef = useRef(new NetworkGraph());
 
-  // Synchronous refs for event handlers to avoid stale closures
+  // Synchronous refs for event handlers to prevent stale closures
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
+  const edgesRef = useRef(edges);
+  edgesRef.current = edges;
   const selectedNodeIdRef = useRef(selectedNodeId);
   selectedNodeIdRef.current = selectedNodeId;
   const selectedDeviceTypeRef = useRef(selectedDeviceType);
   selectedDeviceTypeRef.current = selectedDeviceType;
+  const activeModeRef = useRef(activeMode);
+  activeModeRef.current = activeMode;
+  const connectSourceNodeIdRef = useRef(connectSourceNodeId);
+  connectSourceNodeIdRef.current = connectSourceNodeId;
+  const sourceNodeIdRef = useRef(sourceNodeId);
+  sourceNodeIdRef.current = sourceNodeId;
+  const destinationNodeIdRef = useRef(destinationNodeId);
+  destinationNodeIdRef.current = destinationNodeId;
 
   // Stable label counters per device type
   const nodeCountersRef = useRef({
@@ -78,6 +103,42 @@ export function ARProvider({ children }) {
     };
   }, []);
 
+  // ---- Recalculate route helper ----
+  const recalculateRoute = useCallback((customSrcId, customDstId) => {
+    const srcId = customSrcId !== undefined ? customSrcId : sourceNodeIdRef.current;
+    const dstId = customDstId !== undefined ? customDstId : destinationNodeIdRef.current;
+    const graph = graphRef.current;
+    const arManager = arManagerRef.current;
+    const connectionManager = connectionManagerRef.current;
+
+    if (!srcId || !dstId) {
+      setRoute(null);
+      if (connectionManager && arManager?.scene) {
+        connectionManager.clearRouteHighlights(arManager.scene);
+      }
+      return;
+    }
+
+    const result = findShortestPath(graph, srcId, dstId);
+    setRoute(result);
+
+    const srcNode = graph.getNode(srcId);
+    const dstNode = graph.getNode(dstId);
+
+    if (result.reachable && arManager?.scene && connectionManager) {
+      connectionManager.highlightRoute(arManager.scene, result.edgeIds);
+      const pathNames = result.path.map((id) => graph.getNode(id)?.label || id).join(' → ');
+      setStatusMessage(`Route found: ${pathNames} (${result.totalWeight.toFixed(2)}m)`);
+    } else {
+      if (connectionManager && arManager?.scene) {
+        connectionManager.clearRouteHighlights(arManager.scene);
+      }
+      if (srcNode && dstNode) {
+        setStatusMessage(`No route available between ${srcNode.label} and ${dstNode.label}.`);
+      }
+    }
+  }, []);
+
   // ---- Start AR ----
   const startAR = useCallback(async (canvasElement) => {
     if (!canvasElement) return;
@@ -91,12 +152,14 @@ export function ARProvider({ children }) {
     const reticleManager = new ReticleManager();
     const placementManager = new PlacementManager();
     const deviceManager = new DeviceManager();
+    const connectionManager = new ConnectionManager();
 
     arManagerRef.current = arManager;
     hitTestManagerRef.current = hitTestManager;
     reticleManagerRef.current = reticleManager;
     placementManagerRef.current = placementManager;
     deviceManagerRef.current = deviceManager;
+    connectionManagerRef.current = connectionManager;
 
     try {
       await arManager.startSession(canvasElement, {
@@ -122,7 +185,12 @@ export function ARProvider({ children }) {
           setHitTest('unavailable');
           setPlacement('none');
           setNodes([]);
+          setEdges([]);
           setSelectedNodeId(null);
+          setSelectedEdgeId(null);
+          setSourceNodeId(null);
+          setDestinationNodeId(null);
+          setRoute(null);
           setStatusMessage(null);
         },
       });
@@ -165,9 +233,36 @@ export function ARProvider({ children }) {
     // Cleanup handled in onSessionEnd
   }, []);
 
+  // ---- Set Mode (place, select, connect, source, destination) ----
+  const setActiveMode = useCallback((mode) => {
+    setActiveModeState(mode);
+    setConnectSourceNodeId(null);
+    setSelectedEdgeId(null);
+
+    switch (mode) {
+      case 'place':
+        setStatusMessage(`Place mode: Tap a detected surface to place ${selectedDeviceTypeRef.current}.`);
+        break;
+      case 'connect':
+        setStatusMessage('Connect mode: Tap the first device to connect.');
+        break;
+      case 'source':
+        setStatusMessage('Source mode: Tap a device to set as Route Source.');
+        break;
+      case 'destination':
+        setStatusMessage('Destination mode: Tap a device to set as Route Destination.');
+        break;
+      case 'select':
+      default:
+        setStatusMessage('Select mode: Tap a device or link to inspect.');
+        break;
+    }
+  }, []);
+
   // ---- Device Type Selection ----
   const selectDeviceType = useCallback((type) => {
     setSelectedDeviceType(type);
+    setActiveModeState('place');
     const label = NODE_TYPE_CONFIG[type]?.label || type;
     setStatusMessage(`Selected ${label}. Tap a detected surface to place.`);
   }, []);
@@ -180,6 +275,7 @@ export function ARProvider({ children }) {
         deviceManager.setSelected(nodeId);
       }
       setSelectedNodeId(nodeId);
+      setSelectedEdgeId(null);
       const found = nodesRef.current.find((n) => n.id === nodeId);
       setStatusMessage(`${found?.label || 'Device'} selected.`);
     } else {
@@ -190,25 +286,194 @@ export function ARProvider({ children }) {
     }
   }, []);
 
+  // ---- Select Edge ----
+  const selectEdge = useCallback((edgeId) => {
+    setSelectedEdgeId(edgeId);
+    if (edgeId) {
+      const edge = edgesRef.current.find((e) => e.id === edgeId);
+      if (edge) {
+        const nodeA = graphRef.current.getNode(edge.source);
+        const nodeB = graphRef.current.getNode(edge.target);
+        setStatusMessage(`Link: ${nodeA?.label || edge.source} ↔ ${nodeB?.label || edge.target} (${edge.weight.toFixed(2)}m)`);
+      }
+    }
+  }, []);
+
+  // ---- Create Connection between two devices ----
+  const createConnection = useCallback((sourceId, targetId) => {
+    if (!sourceId || !targetId || sourceId === targetId) return null;
+
+    const graph = graphRef.current;
+    const arManager = arManagerRef.current;
+    const connectionManager = connectionManagerRef.current;
+    const deviceManager = deviceManagerRef.current;
+
+    if (graph.hasEdge(sourceId, targetId)) {
+      setStatusMessage('Connection already exists between these devices.');
+      return null;
+    }
+
+    const pos1 = deviceManager?.getNodePosition(sourceId) || graph.getNode(sourceId)?.position;
+    const pos2 = deviceManager?.getNodePosition(targetId) || graph.getNode(targetId)?.position;
+
+    if (!pos1 || !pos2) return null;
+
+    const edge = graph.addEdge(sourceId, targetId);
+    if (!edge) return null;
+
+    if (connectionManager && arManager?.scene) {
+      connectionManager.addConnection(arManager.scene, edge, pos1, pos2);
+    }
+
+    setEdges(graph.getEdges());
+
+    const nodeA = graph.getNode(sourceId);
+    const nodeB = graph.getNode(targetId);
+    setStatusMessage(`Connected ${nodeA?.label} ↔ ${nodeB?.label} (${edge.weight.toFixed(2)}m).`);
+
+    // Auto-recalculate route if source and destination are already active
+    if (sourceNodeIdRef.current && destinationNodeIdRef.current) {
+      recalculateRoute();
+    }
+
+    return edge;
+  }, [recalculateRoute]);
+
+  // ---- Delete Connection ----
+  const deleteConnection = useCallback((edgeId) => {
+    if (!edgeId) return;
+
+    const graph = graphRef.current;
+    const arManager = arManagerRef.current;
+    const connectionManager = connectionManagerRef.current;
+
+    graph.removeEdge(edgeId);
+
+    if (connectionManager && arManager?.scene) {
+      connectionManager.removeConnection(arManager.scene, edgeId);
+    }
+
+    setEdges(graph.getEdges());
+    if (selectedEdgeId === edgeId) {
+      setSelectedEdgeId(null);
+    }
+
+    setStatusMessage('Connection removed.');
+
+    // Auto-recalculate route if source and destination are active
+    if (sourceNodeIdRef.current && destinationNodeIdRef.current) {
+      recalculateRoute();
+    }
+  }, [selectedEdgeId, recalculateRoute]);
+
+  // ---- Set Source Node ----
+  const setSourceNode = useCallback((nodeId) => {
+    const deviceManager = deviceManagerRef.current;
+    const graph = graphRef.current;
+
+    if (nodeId && nodeId === destinationNodeIdRef.current) {
+      // Cannot be same as destination -> clear destination
+      setDestinationNodeId(null);
+      if (deviceManager) deviceManager.setDeviceRole(nodeId, null);
+    }
+
+    if (sourceNodeIdRef.current && deviceManager) {
+      deviceManager.setDeviceRole(sourceNodeIdRef.current, null);
+    }
+
+    if (nodeId && deviceManager) {
+      deviceManager.setDeviceRole(nodeId, 'source');
+    }
+
+    setSourceNodeId(nodeId);
+    const node = nodeId ? graph.getNode(nodeId) : null;
+    if (node) {
+      setStatusMessage(`Source set to ${node.label}.`);
+    }
+
+    recalculateRoute(nodeId, destinationNodeIdRef.current);
+  }, [recalculateRoute]);
+
+  // ---- Set Destination Node ----
+  const setDestinationNode = useCallback((nodeId) => {
+    const deviceManager = deviceManagerRef.current;
+    const graph = graphRef.current;
+
+    if (nodeId && nodeId === sourceNodeIdRef.current) {
+      // Cannot be same as source -> clear source
+      setSourceNodeId(null);
+      if (deviceManager) deviceManager.setDeviceRole(nodeId, null);
+    }
+
+    if (destinationNodeIdRef.current && deviceManager) {
+      deviceManager.setDeviceRole(destinationNodeIdRef.current, null);
+    }
+
+    if (nodeId && deviceManager) {
+      deviceManager.setDeviceRole(nodeId, 'destination');
+    }
+
+    setDestinationNodeId(nodeId);
+    const node = nodeId ? graph.getNode(nodeId) : null;
+    if (node) {
+      setStatusMessage(`Destination set to ${node.label}.`);
+    }
+
+    recalculateRoute(sourceNodeIdRef.current, nodeId);
+  }, [recalculateRoute]);
+
   // ---- Delete specific node ----
   const deleteNode = useCallback((nodeId) => {
     if (!nodeId) return;
     const arManager = arManagerRef.current;
     const deviceManager = deviceManagerRef.current;
+    const connectionManager = connectionManagerRef.current;
+    const graph = graphRef.current;
 
+    // 1. Remove from 3D device manager
     if (deviceManager && arManager?.scene) {
       deviceManager.removeDevice(arManager.scene, nodeId);
     }
 
+    // 2. Remove from graph and get incident edge IDs
+    const removedEdgeIds = graph.removeNode(nodeId);
+
+    // 3. Remove incident visual connections from 3D scene
+    if (connectionManager && arManager?.scene) {
+      for (const edgeId of removedEdgeIds) {
+        connectionManager.removeConnection(arManager.scene, edgeId);
+      }
+    }
+
     const found = nodesRef.current.find((n) => n.id === nodeId);
-    setNodes((prev) => prev.filter((n) => n.id !== nodeId));
+    setNodes(graph.getNodes());
+    setEdges(graph.getEdges());
 
     if (selectedNodeIdRef.current === nodeId) {
       setSelectedNodeId(null);
     }
+    if (connectSourceNodeIdRef.current === nodeId) {
+      setConnectSourceNodeId(null);
+    }
+
+    // Clear role if deleted device was source or destination
+    let newSrc = sourceNodeIdRef.current;
+    let newDst = destinationNodeIdRef.current;
+
+    if (sourceNodeIdRef.current === nodeId) {
+      newSrc = null;
+      setSourceNodeId(null);
+    }
+    if (destinationNodeIdRef.current === nodeId) {
+      newDst = null;
+      setDestinationNodeId(null);
+    }
 
     setStatusMessage(`${found?.label || 'Device'} removed.`);
-  }, []);
+
+    // Recalculate route
+    recalculateRoute(newSrc, newDst);
+  }, [recalculateRoute]);
 
   // ---- Delete currently selected node ----
   const deleteSelectedNode = useCallback(() => {
@@ -218,12 +483,13 @@ export function ARProvider({ children }) {
     }
   }, [deleteNode]);
 
-  // ---- Tap handler (handles workspace placement, device selection, device placement) ----
+  // ---- Tap handler (handles workspace placement, device selection, connections, routing picks) ----
   const onTap = useCallback((screenX, screenY) => {
     const arManager = arManagerRef.current;
     const hitTestManager = hitTestManagerRef.current;
     const placementManager = placementManagerRef.current;
     const deviceManager = deviceManagerRef.current;
+    const graph = graphRef.current;
 
     if (!arManager || !hitTestManager || !placementManager || !deviceManager) {
       return;
@@ -235,12 +501,11 @@ export function ARProvider({ children }) {
 
       placementManager.place(arManager.scene, hitTestManager.getHitMatrix());
       setPlacement('placed');
-      setStatusMessage('Workspace placed! Choose a device to place.');
+      setStatusMessage('Workspace placed! Choose a device to place or tap Connect.');
       return;
     }
 
-    // Case 2: Workspace already placed -> Check for device selection or device placement
-    // Calculate normalized device coordinates (NDC)
+    // Case 2: Workspace already placed -> Check for interaction based on activeMode
     const ndcX =
       screenX !== undefined
         ? (screenX / window.innerWidth) * 2 - 1
@@ -254,75 +519,156 @@ export function ARProvider({ children }) {
       ? arManager.renderer.xr.getCamera()
       : arManager.camera;
 
-    // Raycast against existing devices first
+    // Raycast against existing devices
     const hitNodeId = deviceManager.getDeviceAtScreenPoint(
       activeCamera,
       ndcX,
       ndcY
     );
 
+    const mode = activeModeRef.current;
+
+    // === MODE: CONNECT ===
+    if (mode === 'connect') {
+      if (hitNodeId) {
+        if (!connectSourceNodeIdRef.current) {
+          // First device tapped
+          setConnectSourceNodeId(hitNodeId);
+          const node = graph.getNode(hitNodeId);
+          setStatusMessage(`Selected ${node?.label}. Now tap second device to connect.`);
+        } else if (connectSourceNodeIdRef.current === hitNodeId) {
+          // Tapped same device again -> deselect
+          setConnectSourceNodeId(null);
+          setStatusMessage('Connect cancelled for this device.');
+        } else {
+          // Second device tapped -> Create connection!
+          createConnection(connectSourceNodeIdRef.current, hitNodeId);
+          setConnectSourceNodeId(null);
+        }
+      } else {
+        // Tapped empty space -> cancel pending connection selection
+        if (connectSourceNodeIdRef.current) {
+          setConnectSourceNodeId(null);
+          setStatusMessage('Connect cancelled.');
+        }
+      }
+      return;
+    }
+
+    // === MODE: SOURCE SELECTION ===
+    if (mode === 'source') {
+      if (hitNodeId) {
+        setSourceNode(hitNodeId);
+        setActiveModeState('select');
+      } else {
+        setStatusMessage('Tap a placed device to set as Source.');
+      }
+      return;
+    }
+
+    // === MODE: DESTINATION SELECTION ===
+    if (mode === 'destination') {
+      if (hitNodeId) {
+        setDestinationNode(hitNodeId);
+        setActiveModeState('select');
+      } else {
+        setStatusMessage('Tap a placed device to set as Destination.');
+      }
+      return;
+    }
+
+    // === MODE: PLACE DEVICE ===
+    if (mode === 'place') {
+      if (hitNodeId) {
+        // Tapped an existing device -> select it
+        deviceManager.setSelected(hitNodeId);
+        setSelectedNodeId(hitNodeId);
+        const found = graph.getNode(hitNodeId);
+        setStatusMessage(`${found?.label || 'Device'} selected.`);
+        return;
+      }
+
+      // Tapped surface -> place new device
+      if (hitTestManager.hasHitResult) {
+        const type = selectedDeviceTypeRef.current || NODE_TYPES.PC;
+        const count = (nodeCountersRef.current[type] || 0) + 1;
+        nodeCountersRef.current[type] = count;
+
+        const label = `${type}-${String(count).padStart(2, '0')}`;
+        const id = `node-${type.toLowerCase()}-${Date.now()}`;
+        const color = NODE_TYPE_CONFIG[type]?.color || '#3b82f6';
+        const hitMatrix = hitTestManager.getHitMatrix();
+
+        deviceManager.addDevice(
+          arManager.scene,
+          type,
+          hitMatrix,
+          id,
+          label,
+          color
+        );
+
+        const pos = deviceManager.getNodePosition(id) || { x: 0, y: 0, z: 0 };
+        const newNode = {
+          id,
+          type,
+          label,
+          position: pos,
+          color,
+        };
+
+        // Add to graph and state
+        graph.addNode(newNode);
+        setNodes(graph.getNodes());
+        setStatusMessage(`${label} placed.`);
+      }
+      return;
+    }
+
+    // === MODE: SELECT / DEFAULT ===
     if (hitNodeId) {
-      // User tapped an existing device -> Select it
       deviceManager.setSelected(hitNodeId);
       setSelectedNodeId(hitNodeId);
-      const found = nodesRef.current.find((n) => n.id === hitNodeId);
+      setSelectedEdgeId(null);
+      const found = graph.getNode(hitNodeId);
       setStatusMessage(`${found?.label || 'Device'} selected.`);
       return;
     }
 
-    // If an object is currently selected and user tapped empty space -> Deselect
+    // Tapped empty space -> Deselect
     if (selectedNodeIdRef.current) {
       deviceManager.clearSelection();
       setSelectedNodeId(null);
       setStatusMessage('Device deselected.');
-      return;
     }
+  }, [createConnection, setSourceNode, setDestinationNode]);
 
-    // Otherwise, place a new device of selectedDeviceType at the current hit-test pose
-    if (hitTestManager.hasHitResult) {
-      const type = selectedDeviceTypeRef.current || NODE_TYPES.PC;
-      const count = (nodeCountersRef.current[type] || 0) + 1;
-      nodeCountersRef.current[type] = count;
-
-      const label = `${type}-${String(count).padStart(2, '0')}`;
-      const id = `node-${type.toLowerCase()}-${Date.now()}`;
-      const color = NODE_TYPE_CONFIG[type]?.color || '#3b82f6';
-      const hitMatrix = hitTestManager.getHitMatrix();
-
-      deviceManager.addDevice(
-        arManager.scene,
-        type,
-        hitMatrix,
-        id,
-        label,
-        color
-      );
-
-      const pos = deviceManager.getNodePosition(id) || { x: 0, y: 0, z: 0 };
-      const newNode = {
-        id,
-        type,
-        label,
-        position: pos,
-        color,
-      };
-
-      setNodes((prev) => [...prev, newNode]);
-      setStatusMessage(`${label} placed.`);
-    }
-  }, []);
-
-  // ---- Reset Network (clears devices only, keeps workspace anchor & AR session) ----
+  // ---- Reset Network (clears devices & connections only, keeps workspace anchor & AR session) ----
   const resetNetwork = useCallback(() => {
     const arManager = arManagerRef.current;
     const deviceManager = deviceManagerRef.current;
+    const connectionManager = connectionManagerRef.current;
+    const graph = graphRef.current;
 
     if (deviceManager && arManager?.scene) {
       deviceManager.removeAll(arManager.scene);
     }
+    if (connectionManager && arManager?.scene) {
+      connectionManager.removeAll(arManager.scene);
+    }
+
+    graph.clear();
 
     setNodes([]);
+    setEdges([]);
     setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+    setSourceNodeId(null);
+    setDestinationNodeId(null);
+    setConnectSourceNodeId(null);
+    setRoute(null);
+    setActiveModeState('place');
+
     nodeCountersRef.current = {
       PC: 0,
       SWITCH: 0,
@@ -333,15 +679,20 @@ export function ARProvider({ children }) {
     setStatusMessage('Network cleared. Workspace anchor preserved.');
   }, []);
 
-  // ---- Reset Placement (clears anchor AND devices, restarts surface scan) ----
+  // ---- Reset Placement (clears anchor, devices, connections, restarts surface scan) ----
   const resetPlacement = useCallback(() => {
     const arManager = arManagerRef.current;
     const placementManager = placementManagerRef.current;
     const deviceManager = deviceManagerRef.current;
+    const connectionManager = connectionManagerRef.current;
     const reticleManager = reticleManagerRef.current;
+    const graph = graphRef.current;
 
     if (deviceManager && arManager?.scene) {
       deviceManager.removeAll(arManager.scene);
+    }
+    if (connectionManager && arManager?.scene) {
+      connectionManager.removeAll(arManager.scene);
     }
     if (placementManager && arManager?.scene) {
       placementManager.reset(arManager.scene);
@@ -350,8 +701,18 @@ export function ARProvider({ children }) {
       reticleManager.show();
     }
 
+    graph.clear();
+
     setNodes([]);
+    setEdges([]);
     setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+    setSourceNodeId(null);
+    setDestinationNodeId(null);
+    setConnectSourceNodeId(null);
+    setRoute(null);
+    setActiveModeState('place');
+
     nodeCountersRef.current = {
       PC: 0,
       SWITCH: 0,
@@ -375,6 +736,10 @@ export function ARProvider({ children }) {
 
     const arManager = arManagerRef.current;
 
+    if (connectionManagerRef.current) {
+      connectionManagerRef.current.dispose(arManager?.scene);
+      connectionManagerRef.current = null;
+    }
     if (deviceManagerRef.current) {
       deviceManagerRef.current.dispose(arManager?.scene);
       deviceManagerRef.current = null;
@@ -395,6 +760,7 @@ export function ARProvider({ children }) {
       arManager.dispose();
       arManagerRef.current = null;
     }
+    graphRef.current.clear();
   }
 
   // Cleanup on unmount
@@ -412,21 +778,37 @@ export function ARProvider({ children }) {
     placement,
     errorMessage,
     statusMessage,
-    // Network Device State
+    // Network Device & Topology State
     nodes,
+    edges,
     selectedNodeId,
+    selectedEdgeId,
     selectedDeviceType,
+    // Phase 4: Interaction Modes & Routing
+    activeMode,
+    connectSourceNodeId,
+    sourceNodeId,
+    destinationNodeId,
+    route,
     // Actions
     startAR,
     endAR,
     onTap,
+    setActiveMode,
     selectDeviceType,
     selectNode,
+    selectEdge,
     deleteNode,
     deleteSelectedNode,
+    createConnection,
+    deleteConnection,
+    setSourceNode,
+    setDestinationNode,
+    recalculateRoute,
     resetNetwork,
     resetPlacement,
   };
 
   return <ARContext.Provider value={value}>{children}</ARContext.Provider>;
 }
+

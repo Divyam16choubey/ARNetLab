@@ -22,8 +22,10 @@ const COLORS = {
   SERVER: 0xa855f7,
 };
 
-// Selection visual constants
+// Selection and Role visual constants
 const SELECTION_RING_COLOR = 0x38bdf8; // sky blue highlight ring
+const SOURCE_RING_COLOR = 0x10b981;    // emerald green source ring
+const DEST_RING_COLOR = 0xf43f5e;      // rose/fuchsia destination ring
 
 /**
  * Create a network device mesh group.
@@ -50,7 +52,7 @@ export function createDeviceMesh(type) {
       break;
   }
 
-  // Create a selection highlight ring around the base (hidden by default)
+  // 1. Selection highlight ring around the base (hidden by default)
   const ringGeo = new THREE.RingGeometry(0.038, 0.044, 32);
   ringGeo.rotateX(-Math.PI / 2);
   const ringMat = new THREE.MeshBasicMaterial({
@@ -62,9 +64,41 @@ export function createDeviceMesh(type) {
   });
   const selectionRing = new THREE.Mesh(ringGeo, ringMat);
   selectionRing.name = '_selectionRing';
-  selectionRing.position.y = 0.001; // slightly above base to avoid z-fighting
+  selectionRing.position.y = 0.001;
   selectionRing.visible = false;
   group.add(selectionRing);
+
+  // 2. Source role indicator ring (green, slightly wider)
+  const sourceGeo = new THREE.RingGeometry(0.046, 0.052, 32);
+  sourceGeo.rotateX(-Math.PI / 2);
+  const sourceMat = new THREE.MeshBasicMaterial({
+    color: SOURCE_RING_COLOR,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.95,
+    depthWrite: false,
+  });
+  const sourceRing = new THREE.Mesh(sourceGeo, sourceMat);
+  sourceRing.name = '_sourceRing';
+  sourceRing.position.y = 0.0012;
+  sourceRing.visible = false;
+  group.add(sourceRing);
+
+  // 3. Destination role indicator ring (rose, slightly wider)
+  const destGeo = new THREE.RingGeometry(0.046, 0.052, 32);
+  destGeo.rotateX(-Math.PI / 2);
+  const destMat = new THREE.MeshBasicMaterial({
+    color: DEST_RING_COLOR,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.95,
+    depthWrite: false,
+  });
+  const destRing = new THREE.Mesh(destGeo, destMat);
+  destRing.name = '_destRing';
+  destRing.position.y = 0.0012;
+  destRing.visible = false;
+  group.add(destRing);
 
   return group;
 }
@@ -77,7 +111,7 @@ export function setDeviceSelected(group) {
   group.traverse((obj) => {
     if (obj.name === '_selectionRing') {
       obj.visible = true;
-    } else if (obj.isMesh && obj.material && obj.material.emissive) {
+    } else if (obj.isMesh && obj.material && obj.material.emissive && !obj.name.startsWith('_')) {
       if (!obj.userData.origEmissive) {
         obj.userData.origEmissive = obj.material.emissive.getHex();
         obj.userData.origEmissiveIntensity = obj.material.emissiveIntensity ?? 1.0;
@@ -96,11 +130,26 @@ export function clearDeviceSelected(group) {
   group.traverse((obj) => {
     if (obj.name === '_selectionRing') {
       obj.visible = false;
-    } else if (obj.isMesh && obj.material && obj.material.emissive) {
+    } else if (obj.isMesh && obj.material && obj.material.emissive && !obj.name.startsWith('_')) {
       const orig = obj.userData.origEmissive !== undefined ? obj.userData.origEmissive : 0x000000;
       const origIntensity = obj.userData.origEmissiveIntensity !== undefined ? obj.userData.origEmissiveIntensity : 1.0;
       obj.material.emissive.setHex(orig);
       obj.material.emissiveIntensity = origIntensity;
+    }
+  });
+}
+
+/**
+ * Set the network role indicator on a device group (source, destination, or clear).
+ * @param {THREE.Group} group
+ * @param {'source'|'destination'|null} role
+ */
+export function setDeviceRoleVisual(group, role) {
+  group.traverse((obj) => {
+    if (obj.name === '_sourceRing') {
+      obj.visible = role === 'source';
+    } else if (obj.name === '_destRing') {
+      obj.visible = role === 'destination';
     }
   });
 }

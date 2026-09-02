@@ -13,7 +13,12 @@
  */
 
 import * as THREE from 'three';
-import { createDeviceMesh, setDeviceSelected, clearDeviceSelected } from './DeviceFactory';
+import {
+  createDeviceMesh,
+  setDeviceSelected,
+  clearDeviceSelected,
+  setDeviceRoleVisual,
+} from './DeviceFactory';
 import { createLabelSprite, disposeLabelSprite } from './LabelManager';
 
 export class DeviceManager {
@@ -23,6 +28,9 @@ export class DeviceManager {
 
     /** @type {Map<string, THREE.Sprite>} nodeId → label sprite */
     this._labels = new Map();
+
+    /** @type {Map<string, 'source'|'destination'>} nodeId → role */
+    this._roles = new Map();
 
     /** @type {string|null} */
     this._selectedId = null;
@@ -71,6 +79,7 @@ export class DeviceManager {
     if (this._selectedId === nodeId) {
       this._selectedId = null;
     }
+    this._roles.delete(nodeId);
 
     // Remove label
     const sprite = this._labels.get(nodeId);
@@ -121,11 +130,11 @@ export class DeviceManager {
     if (!camera) return null;
     this._raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
 
-    // Collect all meshes (excluding sprites/labels and selection indicators)
+    // Collect all meshes (excluding sprites/labels and indicator rings)
     const meshes = [];
     for (const group of this._devices.values()) {
       group.traverse((obj) => {
-        if (obj.isMesh && obj.name !== '_selectionRing') meshes.push(obj);
+        if (obj.isMesh && !obj.name.startsWith('_')) meshes.push(obj);
       });
     }
 
@@ -144,6 +153,33 @@ export class DeviceManager {
     }
 
     return null;
+  }
+
+  /**
+   * Set a device's network role visual (source, destination, or clear).
+   * @param {string} nodeId
+   * @param {'source'|'destination'|null} role
+   */
+  setDeviceRole(nodeId, role) {
+    const group = this._devices.get(nodeId);
+    if (group) {
+      setDeviceRoleVisual(group, role);
+      if (role) {
+        this._roles.set(nodeId, role);
+      } else {
+        this._roles.delete(nodeId);
+      }
+    }
+  }
+
+  /**
+   * Clear all device roles (source / destination).
+   */
+  clearAllRoles() {
+    for (const group of this._devices.values()) {
+      setDeviceRoleVisual(group, null);
+    }
+    this._roles.clear();
   }
 
   /**
@@ -217,6 +253,7 @@ export class DeviceManager {
     }
     this._devices.clear();
     this._labels.clear();
+    this._roles.clear();
     this._selectedId = null;
   }
 }

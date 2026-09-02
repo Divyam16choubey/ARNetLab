@@ -23,21 +23,21 @@ const CAPABILITIES = [
     title: 'AR Device Placement',
     description:
       'Place virtual PCs, switches, routers, and servers on real-world surfaces using augmented reality.',
-    status: 'Implemented in Phase 3',
+    status: 'Implemented (Phase 3)',
   },
   {
     icon: <Network size={22} />,
     title: 'Network Topology Builder',
     description:
-      'Create connections between devices to build network topologies visually in 3D space.',
-    status: 'Planned for Phase 4',
+      'Create 3D connections between devices to build undirected network graphs with real Euclidean distance weights.',
+    status: 'Implemented (Phase 4)',
   },
   {
     icon: <Route size={22} />,
     title: 'Shortest Path Routing',
     description:
-      'Select source and destination nodes, then compute the shortest route through your network.',
-    status: 'Planned for Phase 4',
+      'Select source and destination nodes, then compute and highlight the optimal Dijkstra route in 3D AR.',
+    status: 'Implemented (Phase 4)',
   },
   {
     icon: <Eye size={22} />,
