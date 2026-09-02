@@ -88,9 +88,19 @@ export class PlacementManager {
       // Dispose all children
       this.anchor.traverse((obj) => {
         if (obj.geometry) obj.geometry.dispose();
-        if (obj.material) obj.material.dispose();
+        if (obj.material) {
+          if (Array.isArray(obj.material)) {
+            obj.material.forEach((m) => m.dispose());
+          } else {
+            obj.material.dispose();
+          }
+        }
       });
-      scene.remove(this.anchor);
+      if (scene) {
+        scene.remove(this.anchor);
+      } else if (this.anchor.parent) {
+        this.anchor.parent.remove(this.anchor);
+      }
       this.anchor = null;
     }
     this.isPlaced = false;
@@ -101,7 +111,7 @@ export class PlacementManager {
    * @param {THREE.Scene} [scene]
    */
   dispose(scene) {
-    if (scene) this.reset(scene);
+    this.reset(scene);
     this.anchor = null;
     this.isPlaced = false;
   }

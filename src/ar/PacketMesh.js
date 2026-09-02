@@ -138,6 +138,8 @@ export class PacketMesh {
     if (this.group) {
       if (scene) {
         scene.remove(this.group);
+      } else if (this.group.parent) {
+        this.group.parent.remove(this.group);
       }
       this.group.traverse((obj) => {
         if (obj.geometry) obj.geometry.dispose();

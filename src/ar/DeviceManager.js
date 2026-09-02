@@ -37,6 +37,9 @@ export class DeviceManager {
 
     /** @type {THREE.Raycaster} reused for selection */
     this._raycaster = new THREE.Raycaster();
+
+    /** @type {THREE.Vector2} reused NDC coordinates to avoid per-tap allocations */
+    this._ndc = new THREE.Vector2();
   }
 
   /**
@@ -101,14 +104,18 @@ export class DeviceManager {
           }
         }
       });
-      scene.remove(group);
+      if (scene) {
+        scene.remove(group);
+      } else if (group.parent) {
+        group.parent.remove(group);
+      }
       this._devices.delete(nodeId);
     }
   }
 
   /**
    * Remove all devices from the scene.
-   * @param {THREE.Scene} scene
+   * @param {THREE.Scene} [scene]
    */
   removeAll(scene) {
     for (const nodeId of Array.from(this._devices.keys())) {
@@ -128,7 +135,8 @@ export class DeviceManager {
    */
   getDeviceAtScreenPoint(camera, ndcX, ndcY) {
     if (!camera) return null;
-    this._raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+    this._ndc.set(ndcX, ndcY);
+    this._raycaster.setFromCamera(this._ndc, camera);
 
     // Collect all meshes (excluding sprites/labels and indicator rings)
     const meshes = [];
@@ -248,9 +256,7 @@ export class DeviceManager {
    * @param {THREE.Scene} [scene]
    */
   dispose(scene) {
-    if (scene) {
-      this.removeAll(scene);
-    }
+    this.removeAll(scene);
     this._devices.clear();
     this._labels.clear();
     this._roles.clear();

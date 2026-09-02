@@ -309,9 +309,16 @@ export function ARProvider({ children }) {
             arManager.localRefSpace
           );
 
+          // Reticle is only displayed during initial workspace placement or device placement mode
+          const shouldShowReticle = !placementManager.isPlaced || activeModeRef.current === 'place';
+
           if (hasHit) {
-            reticleManager.updatePose(hitTestManager.getHitMatrix());
             hitTestReadyRef.current = true;
+            if (shouldShowReticle) {
+              reticleManager.updatePose(hitTestManager.getHitMatrix());
+            } else {
+              reticleManager.hide();
+            }
           } else {
             reticleManager.hide();
             hitTestReadyRef.current = false;
@@ -357,13 +364,12 @@ export function ARProvider({ children }) {
       setHitTest('searching');
       setStatusMessage('Move your phone slowly to find a surface…');
 
-      // Poll hit-test readiness at low frequency to update React UI
+      // Poll hit-test readiness at low frequency to update React UI without redundant re-renders
       hitTestIntervalRef.current = setInterval(() => {
-        if (hitTestReadyRef.current) {
-          setHitTest('ready');
-        } else {
-          setHitTest((prev) => (prev === 'ready' ? 'searching' : prev));
-        }
+        setHitTest((prev) => {
+          const next = hitTestReadyRef.current ? 'ready' : 'searching';
+          return prev === next ? prev : next;
+        });
       }, 300);
     } catch (err) {
       cleanupManagers();

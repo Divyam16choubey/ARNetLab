@@ -266,6 +266,7 @@ export class ConnectionManager {
   _createConnectionGroup(pos1, pos2, mode = 'normal') {
     const group = new THREE.Group();
     const style = mode === 'packet' ? STYLE_ACTIVE_PACKET : mode === 'route' ? STYLE_ROUTE : STYLE_NORMAL;
+    const isRouteOrPacket = mode === 'route' || mode === 'packet';
 
     // Connect from device center (y offset ~0.02m)
     const yOffset = 0.015;
@@ -285,8 +286,8 @@ export class ConnectionManager {
 
     const mat = new THREE.MeshStandardMaterial({
       color: style.color,
-      emissive: isHighlighted ? 0x10b981 : 0x0284c7,
-      emissiveIntensity: isHighlighted ? 0.9 : 0.4,
+      emissive: style.emissive,
+      emissiveIntensity: style.emissiveIntensity,
       roughness: 0.3,
       metalness: 0.1,
       transparent: true,
@@ -309,11 +310,11 @@ export class ConnectionManager {
 
     group.add(cylinder);
 
-    // If highlighted route, add small end pulse rings at endpoints
-    if (isHighlighted) {
+    // If highlighted route or active packet, add small end pulse rings at endpoints
+    if (isRouteOrPacket) {
       const ringGeo = new THREE.RingGeometry(0.004, 0.007, 16);
       const ringMat = new THREE.MeshBasicMaterial({
-        color: 0x34d399,
+        color: mode === 'packet' ? 0xfbbf24 : 0x34d399,
         side: THREE.DoubleSide,
         transparent: true,
         opacity: 0.9,

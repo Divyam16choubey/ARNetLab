@@ -236,7 +236,7 @@ export default function AROverlay() {
 
       {/* Contextual Device Inspector Card (when device selected) */}
       {selectedNode && (
-        <div className="mx-auto w-full max-w-sm p-4 bg-neutral-950/92 text-white rounded-2xl backdrop-blur-xl border border-white/20 shadow-2xl animate-fade-in-up pointer-events-auto mb-2">
+        <div className="mx-auto w-full max-w-sm p-4 bg-neutral-950/92 text-white rounded-2xl backdrop-blur-xl border border-white/20 shadow-2xl animate-fade-in-up pointer-events-auto mb-2 max-h-[75vh] overflow-y-auto">
           <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
             <div className="flex items-center gap-2.5">
               <span

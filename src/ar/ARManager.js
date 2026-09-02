@@ -36,7 +36,10 @@ export class ARManager {
     /** @type {(() => void)|null} */
     this.onSessionEndCallback = null;
 
+    this._isDisposed = false;
     this._boundOnFrame = this._onXRFrame.bind(this);
+    this._boundOnResize = this._onResize.bind(this);
+    this._boundSessionEnd = this._handleSessionEnd.bind(this);
   }
 
   /**
@@ -111,9 +114,11 @@ export class ARManager {
     }
 
     // Listen for session end
-    this.session.addEventListener('end', () => {
-      this._handleSessionEnd();
-    });
+    this.session.addEventListener('end', this._boundSessionEnd);
+
+    // Listen for window resize and orientation change
+    window.addEventListener('resize', this._boundOnResize);
+    window.addEventListener('orientationchange', this._boundOnResize);
 
     // Acquire tracking reference space with graceful fallback.
     // Three.js defaults to 'local-floor' which is unsupported on handheld AR (ARCore / Galaxy Tab S9 FE),
@@ -175,11 +180,30 @@ export class ARManager {
   }
 
   /**
+   * Handle viewport resize and device orientation changes.
+   */
+  _onResize() {
+    if (!this.renderer || !this.camera) return;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(width, height);
+  }
+
+  /**
    * Handle session end (either user-initiated or unexpected).
    */
   _handleSessionEnd() {
+    if (this._isDisposed) return;
+    this._isDisposed = true;
+
     if (this.onSessionEndCallback) {
-      this.onSessionEndCallback();
+      try {
+        this.onSessionEndCallback();
+      } catch (err) {
+        console.warn('Error in onSessionEndCallback:', err);
+      }
     }
     this.dispose();
   }
@@ -201,10 +225,27 @@ export class ARManager {
    * Dispose all resources.
    */
   dispose() {
+    this._isDisposed = true;
+
+    window.removeEventListener('resize', this._boundOnResize);
+    window.removeEventListener('orientationchange', this._boundOnResize);
+
+    if (this.session) {
+      try {
+        this.session.removeEventListener('end', this._boundSessionEnd);
+      } catch {}
+    }
+
     if (this.renderer) {
-      this.renderer.setAnimationLoop(null);
-      this.renderer.xr.setSession(null);
-      this.renderer.dispose();
+      try {
+        this.renderer.setAnimationLoop(null);
+      } catch {}
+      try {
+        this.renderer.xr.setSession(null);
+      } catch {}
+      try {
+        this.renderer.dispose();
+      } catch {}
       this.renderer = null;
     }
 

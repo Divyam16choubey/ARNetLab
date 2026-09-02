@@ -142,7 +142,7 @@ export default function ARLabPage() {
                   AR Lab
                 </span>
                 <Badge variant={session === 'error' ? 'warning' : 'info'}>
-                  Phase 5 — Virtual Packet Simulation
+                  Phase 6 — Hardening &amp; Stabilization
                 </Badge>
               </div>
             </div>

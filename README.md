@@ -4,9 +4,9 @@
 
 **ARNetLab: An Interactive Augmented Reality Platform for Network Topology Visualization and Routing** is an educational project for exploring computer-network topologies in a physical space. The intended experience is to place virtual devices such as PCs, switches, routers, and servers on a real surface, connect them, and observe a route between selected devices.
 
-## Current Status — Phase 5 (Virtual Packet Simulation & Route Traversal)
+### Current Status — Phase 6 (Real-Device Hardening, Reliability & Stabilization)
 
-Phase 5 introduces a complete **3D virtual packet simulation** operating directly upon the Dijkstra shortest route computed in Phase 4. Users can dispatch a virtual 3D data packet from the Source device, follow its edge-by-edge traversal across every intermediate hop at a constant world-space speed with active edge highlighting, witness destination delivery feedback, and safely stop, reset, or re-run the simulation. Dynamic topology mutations during transit (such as deleting an active edge or device) are handled with instant, safe termination.
+Phase 6 hardens ARNetLab for physical handheld WebXR devices (verified on Samsung Galaxy Tab S9 FE). It resolves real-device reference-space negotiation failures, eliminates stale hit-test pose retention, hardens Three.js resource cleanup, optimizes render loops and memory consumption, improves orientation responsiveness, and introduces automated manager lifecycle regression tests.
 
 ### Implemented
 
@@ -67,6 +67,21 @@ Phase 5 introduces a complete **3D virtual packet simulation** operating directl
 - **Simulation UI Controls** — "Send Packet", "Stop Packet", and "Send Again" controls in `RouteStatus`, `AROverlay`, `NetworkControls`, and `NetworkToolbar`.
 - **Accurate Simulation Metrics** — Displays actual elapsed simulation time (e.g. `Simulation Time: 3.4s`) and hop progress without fabricating network latency.
 - **Automated Test Suite (`packetSimulator.test.js`)** — 10 unit tests covering direct transmission, multi-hop, Dijkstra adherence, dynamic edge/node deletion, network reset, and re-dispatch (100% pass rate).
+
+#### Phase 6 — Real-Device Hardening & Stabilization
+- **Reference Space Fallback & ARCore Compatibility** — Configures Three.js `renderer.xr.setReferenceSpaceType('local')` before `setSession` to prevent Three.js from defaulting to unsupported `'local-floor'` on handheld AR devices (resolved real-device crash on Galaxy Tab S9 FE).
+- **Graceful Reference Space Negotiation** — Negotiates `'local'` → `'local-floor'` → `'viewer'` with coordinate system synchronization between Three.js camera rendering and `HitTestManager.update(frame, localRefSpace)`.
+- **Stale Pose Elimination** — Nullifies `_lastPoseMatrix` in `HitTestManager` whenever a frame has 0 hit results, ensuring `getHitPoseMatrixCopy()` never returns outdated spatial matrices.
+- **Defensive Hit-Test Cancellation** — Checks and safely cancels active hit-test sources on teardown.
+- **Connection Visuals Hardening** — Corrected undeclared variable references in `ConnectionManager` for route highlights and packet edge styling.
+- **Unobstructed Interaction in AR** — Placement reticle automatically hides during `connect`, `select`, `source`, and `dest` modes, preventing the surface tracking ring from interfering with device touch targeting.
+- **Parent-Detached Disposal** — Enhanced `PlacementManager`, `ReticleManager`, `DeviceManager`, and `PacketMesh` cleanup routines to safely remove meshes from their parents regardless of whether `scene` is passed.
+- **Texture & Canvas Memory Reclamation** — Disposes canvas backing store memory in `LabelManager` (`width = 0; height = 0`) to prevent texture memory leaks in mobile Chrome.
+- **Zero-Allocation Raycasting** — Reuses a pre-allocated NDC Vector2 in `DeviceManager` across screen tap interactions.
+- **WebXR Orientation & Viewport Sync** — Added `resize` and `orientationchange` handlers in `ARManager` to adjust camera projection and renderer viewport on tablet orientation flips.
+- **Session Interruption Safety** — Added guard flags in `ARManager` against duplicate `_handleSessionEnd` invocations from system interruptions or app switching.
+- **Landscape Tablet UI Optimization** — Added scrolling constraints (`max-h-[75vh] overflow-y-auto`) to the AR contextual inspector card to prevent viewport clipping on landscape displays.
+- **Automated Lifecycle Regression Tests (`lifecycleAndManagers.test.js`)** — Validates stale pose elimination, link styling, parent-detached disposal, and canvas memory reclamation (100% pass rate).
 
 ### Strictly Excluded (Visual Simulation Boundary)
 
@@ -166,38 +181,44 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 npm run build
 ```
 
-## Testing AR on a Real Mobile Device
+## Testing & Verification Procedures
 
-WebXR requires a **secure context** (HTTPS or localhost). To test on a mobile device:
+### Distinction: Code-Level Verification vs. Real-Device Verification
 
-### Option 1: Chrome DevTools Port Forwarding (Recommended)
-1. Connect your Android device via USB
-2. Enable USB debugging on the device
-3. Open `chrome://inspect` in desktop Chrome
-4. Set up port forwarding: `5173` → `localhost:5173`
-5. On the device, open Chrome and navigate to `http://localhost:5173/ar-lab`
+- **Code-Level Verification:**
+  - Automated unit test suite: `node src/network/__tests__/dijkstra.test.js` (7/7 passed).
+  - Automated packet simulation suite: `node src/network/__tests__/packetSimulator.test.js` (10/10 passed).
+  - Automated AR lifecycle suite: `node src/ar/__tests__/lifecycleAndManagers.test.js` (4/4 passed).
+  - Linting: `npm run lint` (0 warnings, 0 errors).
+  - Production compilation: `npm run build` (successful bundle).
 
-### Option 2: Local Network Access
-```bash
-npm run dev -- --host
-```
+- **Real-Device Verification (Galaxy Tab S9 FE, Chrome for Android):**
+  - WebXR AR session begins successfully via `navigator.xr.requestSession('immersive-ar')`.
+  - Passthrough camera feed active.
+  - Surface detection via `XRHitTestSource` operates in real-time.
+  - Placement reticle tracks detected horizontal planes.
+  - Tap-to-place instantiates workspace anchor platform on detected plane.
+  - Workspace anchor platform remains world-locked at physical surface location.
 
-### Device Requirements
-- **Android** device with ARCore support
-- **Chrome** browser (v79+ with WebXR support)
-- Camera permission must be granted
+### Recommended Chrome for Android Verification Procedure
+1. Serve ARNetLab over HTTPS (required by WebXR) or via `localhost` port-forwarding in Chrome DevTools (`chrome://inspect`).
+2. Open Chrome on an ARCore-certified device (e.g., Galaxy Tab S9 FE).
+3. Navigate to `/ar-lab`.
+4. Tap **Enter AR** and accept the camera permission prompt.
+5. Move the device slowly across a textured horizontal surface (desk or table).
+6. Verify the teal reticle appears flat upon the detected surface.
+7. Tap the surface to anchor the workspace.
+8. Switch to **Place** mode and place multiple devices (PC, Switch, Router, Server).
+9. Switch to **Connect** mode and link devices.
+10. Set **Source** and **Destination** devices to view Dijkstra route highlight (emerald green).
+11. Tap **Send Packet** and observe the virtual packet traversing edge-by-edge in 3D world space.
+12. Tap **Exit AR** to return to standard UI.
 
-### Desktop Fallback
-On desktop browsers (which lack WebXR AR support), the AR Lab page shows a clear "AR is not supported" status with an interactive device type selector, network toolbar, and roadmap information.
-
-## Pages
-
-| Route | Page | Description |
-|-------|------|-------------|
-| `/` | Home | Landing page with hero, capabilities, and workflow overview |
-| `/ar-lab` | AR Lab | AR workspace — Enter AR on mobile, interactive preview on desktop |
-| `/how-it-works` | How It Works | Step-by-step walkthrough of the planned AR experience |
-| `/about` | About | Project overview, tech stack, and development status |
+### Recommended Samsung Internet Verification Procedure
+1. Launch Samsung Internet on the device.
+2. Ensure WebXR is enabled in `internet://flags` if required on older versions.
+3. Follow steps 3–12 above.
+4. Verify WebXR session teardown cleanly releases camera resources upon tab exit.
 
 ## AR Architecture
 
@@ -206,37 +227,35 @@ React (UI layer)                Vanilla JS (XR frame loop)
 ─────────────────               ───────────────────────────
 ARContext.jsx ────────────────► ARManager.js
   ├─ session state                ├─ Three.js renderer
-  ├─ hitTest state                ├─ XR session lifecycle
-  ├─ placement state              ├─ render loop
+  ├─ hitTest state                ├─ XR session lifecycle ('local' ref space)
+  ├─ placement state              ├─ render loop (vanilla JS, 0 React setState)
   ├─ nodes state (PC, Switch...) HitTestManager.js
-  ├─ selectedNodeId               ├─ XRHitTestSource
-  └─ selectedDeviceType           └─ per-frame pose extraction
-                                 ReticleManager.js
-                                  └─ ring mesh on surfaces
+  ├─ selectedNodeId               ├─ XRHitTestSource ('viewer' ray)
+  ├─ simulationStatus             └─ per-frame pose extraction (no stale leaks)
+  └─ packetInfo                  ReticleManager.js
+                                  └─ ring mesh on surfaces (hides in non-place modes)
                                  PlacementManager.js
                                   └─ workspace anchor platform
                                  DeviceFactory.js
-                                  └─ procedural 3D meshes
+                                  └─ procedural 3D meshes (PC, Switch, Router, Server)
                                  DeviceManager.js
                                   ├─ scene node registry
-                                  ├─ Three.js raycasting
+                                  ├─ pre-allocated NDC raycasting
                                   └─ selection highlight
+                                 ConnectionManager.js
+                                  ├─ 3D cylinder links
+                                  ├─ route emerald highlights
+                                  └─ packet active gold highlights
+                                 PacketMesh.js
+                                  └─ icosahedron mesh with pulsating beacon ring
                                  LabelManager.js
-                                  └─ floating sprite labels
+                                  └─ floating sprite labels with memory disposal
 ```
 
-React state is **only updated on discrete events** (session start/end, placement, selection, deletion, reset). The XR frame loop runs in vanilla JavaScript with zero React re-renders per frame.
+React state is **only updated on discrete milestone events** (session start/end, placement, selection, deletion, reset, packet milestones). The XR frame loop runs in vanilla JavaScript with zero React re-renders per frame.
 
 ## Documentation
 
 - [Project report](Documentation/ARNetLab_Report.pdf)
 - [Project slides](Documentation/ARNetLab_Slides.pdf)
-
-## Next Steps (Phase 6 — Real Android Device Testing & Stabilization)
-
-1. Real Android device field testing (WebXR compatibility, ARCore session stability)
-2. AR surface tracking reliability and camera drift compensation
-3. Mobile performance profiling, frame rate monitoring, and memory optimization
-4. Touch ergonomics and responsive layout validation across mobile aspect ratios
-5. Cross-browser AR compatibility testing (Chrome for Android, Samsung Internet)
 

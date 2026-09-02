@@ -71,11 +71,23 @@ export function createLabelSprite(text, colorHex = '#ffffff') {
  * @param {THREE.Sprite} sprite
  */
 export function disposeLabelSprite(sprite) {
+  if (!sprite) return;
+  if (sprite.parent) {
+    sprite.parent.remove(sprite);
+  }
   if (sprite.material) {
     if (sprite.material.map) {
       sprite.material.map.dispose();
     }
     sprite.material.dispose();
+  }
+  if (sprite.geometry) {
+    sprite.geometry.dispose();
+  }
+  if (sprite.userData?._labelCanvas) {
+    sprite.userData._labelCanvas.width = 0;
+    sprite.userData._labelCanvas.height = 0;
+    sprite.userData._labelCanvas = null;
   }
 }
 

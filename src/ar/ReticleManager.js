@@ -83,9 +83,13 @@ export class ReticleManager {
    */
   dispose(scene) {
     if (this.mesh) {
-      if (scene) scene.remove(this.mesh);
-      this.mesh.geometry.dispose();
-      this.mesh.material.dispose();
+      if (scene) {
+        scene.remove(this.mesh);
+      } else if (this.mesh.parent) {
+        this.mesh.parent.remove(this.mesh);
+      }
+      if (this.mesh.geometry) this.mesh.geometry.dispose();
+      if (this.mesh.material) this.mesh.material.dispose();
       this.mesh = null;
     }
     this.visible = false;

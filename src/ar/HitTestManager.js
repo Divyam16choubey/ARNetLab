@@ -62,6 +62,7 @@ export class HitTestManager {
   update(frame, localRefSpace) {
     if (!this.hitTestSource) {
       this.hasHitResult = false;
+      this._lastPoseMatrix = null;
       return false;
     }
 
@@ -80,6 +81,7 @@ export class HitTestManager {
     }
 
     this.hasHitResult = false;
+    this._lastPoseMatrix = null;
     return false;
   }
 
@@ -95,10 +97,11 @@ export class HitTestManager {
   /**
    * Get a copy of the current hit pose matrix for placement.
    * Returns a new Float32Array (use sparingly, not in frame loop).
+   * Returns null if no valid surface hit is currently tracked.
    * @returns {Float32Array|null}
    */
   getHitPoseMatrixCopy() {
-    if (!this._lastPoseMatrix) return null;
+    if (!this.hasHitResult || !this._lastPoseMatrix) return null;
     return new Float32Array(this._lastPoseMatrix);
   }
 
@@ -107,7 +110,13 @@ export class HitTestManager {
    */
   dispose() {
     if (this.hitTestSource) {
-      this.hitTestSource.cancel();
+      if (typeof this.hitTestSource.cancel === 'function') {
+        try {
+          this.hitTestSource.cancel();
+        } catch {
+          // Ignore if already cancelled
+        }
+      }
       this.hitTestSource = null;
     }
     this.hasHitResult = false;
