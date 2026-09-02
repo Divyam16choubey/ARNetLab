@@ -95,7 +95,7 @@ export class ARManager {
     // Request immersive-ar session with hit-test
     const sessionInit = {
       requiredFeatures: ['hit-test'],
-      optionalFeatures: ['dom-overlay'],
+      optionalFeatures: ['dom-overlay', 'local', 'local-floor'],
     };
 
     try {
@@ -115,12 +115,42 @@ export class ARManager {
       this._handleSessionEnd();
     });
 
-    // Set the session on the renderer
-    await this.renderer.xr.setSession(this.session);
+    // Acquire tracking reference space with graceful fallback.
+    // Three.js defaults to 'local-floor' which is unsupported on handheld AR (ARCore / Galaxy Tab S9 FE),
+    // throwing: "Failed to execute 'requestReferenceSpace' on 'XRSession': This device does not support the requested reference space type."
+    // Handheld AR devices use 'local' as the primary world coordinate space.
+    let chosenRefSpace = null;
+    let chosenType = 'local';
+    const candidateTypes = ['local', 'local-floor', 'viewer'];
 
-    // Get reference spaces
-    this.localRefSpace = await this.session.requestReferenceSpace('local');
-    this.viewerRefSpace = await this.session.requestReferenceSpace('viewer');
+    for (const type of candidateTypes) {
+      try {
+        chosenRefSpace = await this.session.requestReferenceSpace(type);
+        chosenType = type;
+        break;
+      } catch {
+        // Fall back to next space type
+      }
+    }
+
+    if (!chosenRefSpace) {
+      this.dispose();
+      throw new Error('This device does not support a compatible WebXR reference space.');
+    }
+
+    this.localRefSpace = chosenRefSpace;
+
+    // Configure Three.js reference space BEFORE setSession to prevent defaulting to 'local-floor'
+    this.renderer.xr.setReferenceSpaceType(chosenType);
+    await this.renderer.xr.setSession(this.session);
+    this.renderer.xr.setReferenceSpace(chosenRefSpace);
+
+    // Acquire viewer reference space for hit-test raycasting
+    try {
+      this.viewerRefSpace = await this.session.requestReferenceSpace('viewer');
+    } catch {
+      this.viewerRefSpace = chosenRefSpace;
+    }
 
     // Start the render loop
     this.renderer.setAnimationLoop(this._boundOnFrame);
