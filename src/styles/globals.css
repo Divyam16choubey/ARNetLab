@@ -1,152 +1,60 @@
-/* ========================================
-   ARNetLab — Global Styles
-   ======================================== */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@import './variables.css';
-@import './animations.css';
+@layer base {
+  :root {
+    --navbar-height: 64px;
+    --max-width: 1200px;
+  }
 
-/* === Reset === */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
 
-html {
-  scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
-}
+  body {
+    @apply font-sans text-base leading-normal text-neutral-900 bg-white dark:text-neutral-50 dark:bg-neutral-950 min-h-screen antialiased;
+    transition: background-color 200ms ease, color 200ms ease;
+  }
 
-body {
-  font-family: var(--font-family);
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-normal);
-  color: var(--text-primary);
-  background-color: var(--bg-primary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  transition: background-color var(--transition-base), color var(--transition-base);
-  min-height: 100vh;
-}
+  /* Selection */
+  ::selection {
+    @apply bg-primary-200 text-primary-900 dark:bg-primary-800 dark:text-primary-100;
+  }
 
-img,
-picture,
-video,
-canvas,
-svg {
-  display: block;
-  max-width: 100%;
-}
+  /* Scrollbars */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-neutral-50 dark:bg-neutral-900;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neutral-300 dark:bg-neutral-700 rounded-full;
+  }
 
-input,
-button,
-textarea,
-select {
-  font: inherit;
-  color: inherit;
-}
-
-a {
-  color: var(--color-primary-500);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-a:hover {
-  color: var(--color-primary-600);
-}
-
-ul, ol {
-  list-style: none;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  line-height: var(--line-height-tight);
-  font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
-}
-
-h1 { font-size: var(--font-size-4xl); }
-h2 { font-size: var(--font-size-3xl); }
-h3 { font-size: var(--font-size-2xl); }
-h4 { font-size: var(--font-size-xl); }
-
-p {
-  color: var(--text-secondary);
-  line-height: var(--line-height-relaxed);
-}
-
-button {
-  cursor: pointer;
-  border: none;
-  background: none;
-}
-
-/* === Focus Visible === */
-:focus-visible {
-  outline: 2px solid var(--color-primary-500);
-  outline-offset: 2px;
-}
-
-/* === Selection === */
-::selection {
-  background-color: var(--color-primary-200);
-  color: var(--color-primary-900);
-}
-
-[data-theme="dark"] ::selection {
-  background-color: var(--color-primary-800);
-  color: var(--color-primary-100);
-}
-
-/* === Scrollbar === */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-neutral-300);
-  border-radius: var(--radius-full);
-}
-
-[data-theme="dark"] ::-webkit-scrollbar-thumb {
-  background: var(--color-neutral-700);
-}
-
-/* === Utility === */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
-}
-
-.container {
-  width: 100%;
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 0 var(--space-4);
-}
-
-@media (min-width: 640px) {
-  .container {
-    padding: 0 var(--space-6);
+  /* Focus Visible */
+  :focus-visible {
+    outline: 2px solid theme('colors.primary.500');
+    outline-offset: 2px;
   }
 }
 
-@media (min-width: 1024px) {
-  .container {
-    padding: 0 var(--space-8);
+@layer utilities {
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+  .delay-5 { animation-delay: 0.5s; }
+  .delay-6 { animation-delay: 0.6s; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

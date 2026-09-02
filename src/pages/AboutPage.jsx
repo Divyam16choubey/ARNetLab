@@ -10,7 +10,6 @@ import Badge from '../components/common/Badge';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import PageHeader from '../components/layout/PageHeader';
-import './AboutPage.css';
 
 const TECH_STACK = [
   { name: 'React 18+', description: 'Component-based UI framework' },
@@ -18,7 +17,7 @@ const TECH_STACK = [
   { name: 'Three.js', description: '3D rendering and WebXR integration' },
   { name: 'React Router', description: 'Client-side routing' },
   { name: 'Lucide React', description: 'Lightweight icon library' },
-  { name: 'Vanilla CSS', description: 'Custom properties and design tokens' },
+  { name: 'Tailwind CSS', description: 'Utility-first styling system and design tokens' },
 ];
 
 const IMPLEMENTED = [
@@ -49,14 +48,14 @@ const PLANNED = [
 
 export default function AboutPage() {
   return (
-    <div className="about container">
+    <div className="pb-20 container">
       <PageHeader
         title="About ARNetLab"
         subtitle="An educational augmented reality platform for network topology visualization and routing."
       />
 
       {/* Description */}
-      <section className="about__section animate-fade-in-up">
+      <section className="mb-10 animate-fade-in-up">
         <Card icon={<BookOpen size={22} />} title="Project Overview">
           <p>
             ARNetLab (Augmented Reality Network Lab) is an interactive
@@ -65,7 +64,7 @@ export default function AboutPage() {
             real-world surfaces, students can explore how networks are built,
             how devices connect, and how data is routed through a topology.
           </p>
-          <p style={{ marginTop: 'var(--space-3)' }}>
+          <p className="mt-3">
             The project is being developed in phases, starting with the UI
             foundation and progressively adding AR integration, 3D
             rendering, network logic, and packet simulation.
@@ -74,35 +73,45 @@ export default function AboutPage() {
       </section>
 
       {/* Tech Stack */}
-      <section className="about__section animate-fade-in-up delay-1">
-        <h2 className="about__section-title">
+      <section className="mb-10 animate-fade-in-up delay-1">
+        <h2 className="flex items-center gap-3 text-xl font-bold mb-5 text-neutral-900 dark:text-neutral-50 [&_svg]:text-primary-500 [&_svg]:shrink-0">
           <Code2 size={22} />
           Technology Stack
         </h2>
-        <div className="about__tech-grid">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
           {TECH_STACK.map(({ name, description }) => (
-            <div key={name} className="about__tech-item">
-              <h4>{name}</h4>
-              <p>{description}</p>
+            <div
+              key={name}
+              className="p-4 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900"
+            >
+              <h4 className="text-sm font-semibold mb-1 text-neutral-900 dark:text-neutral-50">
+                {name}
+              </h4>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                {description}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
       {/* Status */}
-      <section className="about__section animate-fade-in-up delay-2">
-        <div className="about__status-grid">
+      <section className="mb-10 animate-fade-in-up delay-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Implemented */}
           <div>
-            <h2 className="about__section-title">
+            <h2 className="flex items-center gap-3 text-xl font-bold mb-5 text-neutral-900 dark:text-neutral-50 [&_svg]:text-primary-500 [&_svg]:shrink-0">
               <CheckCircle2 size={22} />
-              Implemented (Phase 1 & 2)
+              Implemented (Phase 1 &amp; 2)
             </h2>
-            <ul className="about__checklist">
+            <ul className="flex flex-col gap-3">
               {IMPLEMENTED.map((item) => (
-                <li key={item} className="about__checklist-item">
-                  <CheckCircle2 size={16} className="about__check-icon" />
-                  {item}
+                <li
+                  key={item}
+                  className="flex items-start gap-2 text-sm text-neutral-900 dark:text-neutral-50 leading-relaxed"
+                >
+                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                  <span>{item}</span>
                 </li>
               ))}
             </ul>
@@ -110,14 +119,17 @@ export default function AboutPage() {
 
           {/* Planned */}
           <div>
-            <h2 className="about__section-title">
+            <h2 className="flex items-center gap-3 text-xl font-bold mb-5 text-neutral-900 dark:text-neutral-50 [&_svg]:text-primary-500 [&_svg]:shrink-0">
               <Clock size={22} />
               Planned (Future Phases)
             </h2>
-            <ul className="about__checklist">
+            <ul className="flex flex-col gap-3">
               {PLANNED.map(({ feature, phase }) => (
-                <li key={feature} className="about__checklist-item about__checklist-item--planned">
-                  <Clock size={16} className="about__clock-icon" />
+                <li
+                  key={feature}
+                  className="flex items-start flex-wrap gap-2 text-sm text-neutral-900 dark:text-neutral-50 leading-relaxed"
+                >
+                  <Clock size={16} className="text-neutral-400 dark:text-neutral-500 shrink-0 mt-0.5" />
                   <span>{feature}</span>
                   <Badge variant="upcoming">Phase {phase}</Badge>
                 </li>
@@ -128,12 +140,12 @@ export default function AboutPage() {
       </section>
 
       {/* Links */}
-      <section className="about__section animate-fade-in-up delay-3">
-        <h2 className="about__section-title">
+      <section className="mb-10 animate-fade-in-up delay-3">
+        <h2 className="flex items-center gap-3 text-xl font-bold mb-5 text-neutral-900 dark:text-neutral-50 [&_svg]:text-primary-500 [&_svg]:shrink-0">
           <Layers size={22} />
           Resources
         </h2>
-        <div className="about__links">
+        <div className="flex gap-3 flex-wrap">
           <a
             href="https://github.com/Divyam16choubey/ARNetLab"
             target="_blank"

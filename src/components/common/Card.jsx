@@ -1,5 +1,3 @@
-import './Card.css';
-
 /**
  * Reusable card component.
  *
@@ -20,22 +18,44 @@ export default function Card({
   children,
   ...rest
 }) {
-  const classes = ['card', hoverable && 'card--hoverable', className]
+  const baseClasses =
+    'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 transition-all duration-200';
+  const hoverClasses = hoverable
+    ? 'hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-md hover:-translate-y-0.5'
+    : '';
+
+  const classes = [baseClasses, hoverClasses, className]
     .filter(Boolean)
     .join(' ');
 
   return (
     <div className={classes} {...rest}>
       {(icon || title || subtitle) && (
-        <div className="card__header">
-          {icon && <div className="card__icon">{icon}</div>}
-          <div className="card__header-text">
-            {title && <h3 className="card__title">{title}</h3>}
-            {subtitle && <p className="card__subtitle">{subtitle}</p>}
+        <div className="flex items-start gap-4 mb-4">
+          {icon && (
+            <div className="flex items-center justify-center w-11 h-11 rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-400 shrink-0 [&_svg]:w-[22px] [&_svg]:h-[22px]">
+              {icon}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            {title && (
+              <h3 className="text-lg font-semibold mb-1 text-neutral-900 dark:text-neutral-50">
+                {title}
+              </h3>
+            )}
+            {subtitle && (
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                {subtitle}
+              </p>
+            )}
           </div>
         </div>
       )}
-      {children && <div className="card__body">{children}</div>}
+      {children && (
+        <div className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
+          {children}
+        </div>
+      )}
     </div>
   );
 }

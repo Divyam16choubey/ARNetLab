@@ -8,16 +8,15 @@ import ARLabPage from './pages/ARLabPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import AboutPage from './pages/AboutPage';
 import './styles/globals.css';
-import './App.css';
 
 export default function App() {
   return (
     <ThemeProvider>
       <ARProvider>
         <BrowserRouter>
-          <div className="app">
+          <div className="flex flex-col min-h-screen">
             <Navbar />
-            <main className="app__main">
+            <main className="flex-1 flex flex-col">
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/ar-lab" element={<ARLabPage />} />

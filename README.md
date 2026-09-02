@@ -18,7 +18,7 @@ Phase 2 adds **real Augmented Reality** to the application using the WebXR Devic
 - Network UI component foundations (NetworkToolbar, NodeTypeSelector, NetworkControls, RouteStatus, NetworkLegend)
 - Responsive navbar with mobile slide-in menu
 - Client-side routing (React Router v6)
-- CSS design token system, animation system, accessible controls
+- Tailwind CSS design token system, animation system, accessible controls
 
 #### Phase 2 — WebXR AR
 - **WebXR availability detection** — checks `navigator.xr` and `immersive-ar` support
@@ -57,7 +57,7 @@ Phase 2 adds **real Augmented Reality** to the application using the WebXR Devic
 | [Three.js](https://threejs.org/) | 3D rendering and WebXR integration |
 | [React Router v6](https://reactrouter.com/) | Client-side routing |
 | [Lucide React](https://lucide.dev/) | Lightweight icon library |
-| Vanilla CSS | Custom properties, design tokens, responsive layouts |
+| [Tailwind CSS](https://tailwindcss.com/) | Utility-first styling system and design tokens |
 
 ## Project Structure
 
@@ -73,8 +73,7 @@ ARNetLab/
 │   │   ├── ReticleManager.js   #   Placement reticle mesh
 │   │   └── PlacementManager.js #   Workspace anchor placement
 │   ├── components/
-│   │   ├── ar/                 # AR-specific UI
-│   │   │   └── AROverlay.jsx   #   Floating controls during AR session
+│   │   ├── ar/                 # AR-specific UI (AROverlay.jsx)
 │   │   ├── common/             # Button, Card, Badge, Modal, StatusIndicator
 │   │   ├── layout/             # Navbar, Footer, MobileMenu, PageHeader
 │   │   ├── ui/                 # ThemeToggle, EmptyState, LoadingState
@@ -95,14 +94,13 @@ ARNetLab/
 │   ├── types/
 │   │   └── network.js
 │   ├── styles/
-│   │   ├── variables.css
-│   │   ├── animations.css
-│   │   └── globals.css
+│   │   └── globals.css         # Tailwind base, utilities, and scrollbar styles
 │   ├── App.jsx
-│   ├── App.css
 │   └── main.jsx
 ├── index.html
 ├── package.json
+├── postcss.config.js
+├── tailwind.config.js
 ├── vite.config.js
 └── README.md
 ```

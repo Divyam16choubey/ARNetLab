@@ -7,7 +7,6 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useAR } from '../../hooks/useAR';
-import './AROverlay.css';
 
 /**
  * AR-mode floating overlay — status messages and controls rendered
@@ -41,20 +40,23 @@ export default function AROverlay() {
   }
 
   return (
-    <div className="ar-overlay" aria-live="polite">
+    <div
+      className="fixed inset-0 z-overlay pointer-events-none flex flex-col justify-between p-[env(safe-area-inset-top,16px)_16px_env(safe-area-inset-bottom,16px)]"
+      aria-live="polite"
+    >
       {/* Top status bar */}
-      <div className="ar-overlay__top">
-        <div className="ar-overlay__status">
+      <div className="flex justify-center pt-3 pointer-events-auto">
+        <div className="inline-flex items-center gap-2 py-2 px-4 bg-black/65 text-white rounded-full text-sm font-medium backdrop-blur-md animate-fade-in-down [&_svg]:shrink-0 [&_svg]:opacity-85">
           {statusIcon}
           <span>{statusText}</span>
         </div>
       </div>
 
       {/* Bottom controls */}
-      <div className="ar-overlay__bottom">
+      <div className="flex justify-center gap-3 pb-4 pointer-events-auto">
         {placement === 'placed' && (
           <button
-            className="ar-overlay__btn ar-overlay__btn--secondary"
+            className="flex items-center gap-2 py-3 px-5 rounded-full text-sm font-semibold border border-white/30 bg-white/20 text-white active:bg-white/35 cursor-pointer backdrop-blur-md transition-all duration-150 min-h-[48px] [touch-action:manipulation]"
             onClick={resetPlacement}
             aria-label="Reset workspace placement"
           >
@@ -64,7 +66,7 @@ export default function AROverlay() {
         )}
 
         <button
-          className="ar-overlay__btn ar-overlay__btn--exit"
+          className="flex items-center gap-2 py-3 px-5 rounded-full text-sm font-semibold bg-red-500/85 text-white active:bg-red-500 cursor-pointer backdrop-blur-md transition-all duration-150 min-h-[48px] [touch-action:manipulation]"
           onClick={endAR}
           aria-label="Exit AR mode"
         >
@@ -75,7 +77,7 @@ export default function AROverlay() {
 
       {/* Error message */}
       {errorMessage && (
-        <div className="ar-overlay__error">
+        <div className="absolute bottom-[100px] left-1/2 -translate-x-1/2 flex items-center gap-2 py-3 px-4 bg-red-500/90 text-white rounded-xl text-sm max-w-[90vw] text-center backdrop-blur-md animate-fade-in-up pointer-events-auto">
           <AlertCircle size={16} />
           <span>{errorMessage}</span>
         </div>

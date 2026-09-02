@@ -1,5 +1,4 @@
 import { Inbox } from 'lucide-react';
-import './EmptyState.css';
 
 /**
  * Empty state placeholder.
@@ -17,15 +16,19 @@ export default function EmptyState({
   action,
 }) {
   return (
-    <div className="empty-state animate-fade-in">
-      <div className="empty-state__icon">
+    <div className="flex flex-col items-center justify-center text-center py-12 px-6 gap-3 animate-fade-in">
+      <div className="text-neutral-400 dark:text-neutral-500 mb-2">
         {icon || <Inbox size={40} />}
       </div>
-      <h3 className="empty-state__title">{title}</h3>
+      <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+        {title}
+      </h3>
       {description && (
-        <p className="empty-state__description">{description}</p>
+        <p className="text-sm text-neutral-600 dark:text-neutral-400 max-w-[360px]">
+          {description}
+        </p>
       )}
-      {action && <div className="empty-state__action">{action}</div>}
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import { Loader } from 'lucide-react';
-import './LoadingState.css';
 
 /**
  * Loading indicator.
@@ -9,9 +8,9 @@ import './LoadingState.css';
  */
 export default function LoadingState({ message = 'Loading\u2026' }) {
   return (
-    <div className="loading-state">
-      <Loader size={28} className="loading-state__spinner animate-spin" />
-      <p className="loading-state__message">{message}</p>
+    <div className="flex flex-col items-center justify-center py-12 px-6 gap-4">
+      <Loader size={28} className="text-primary-500 animate-spin" />
+      <p className="text-sm text-neutral-600 dark:text-neutral-400">{message}</p>
     </div>
   );
 }
