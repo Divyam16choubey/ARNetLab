@@ -22,7 +22,8 @@ const COLORS = {
   SERVER: 0xa855f7,
 };
 
-const SELECTION_EMISSIVE = 0x444444;
+// Selection visual constants
+const SELECTION_RING_COLOR = 0x38bdf8; // sky blue highlight ring
 
 /**
  * Create a network device mesh group.
@@ -30,18 +31,42 @@ const SELECTION_EMISSIVE = 0x444444;
  * @returns {THREE.Group}
  */
 export function createDeviceMesh(type) {
+  let group;
   switch (type) {
     case 'PC':
-      return _createPC();
+      group = _createPC();
+      break;
     case 'SWITCH':
-      return _createSwitch();
+      group = _createSwitch();
+      break;
     case 'ROUTER':
-      return _createRouter();
+      group = _createRouter();
+      break;
     case 'SERVER':
-      return _createServer();
+      group = _createServer();
+      break;
     default:
-      return _createPC();
+      group = _createPC();
+      break;
   }
+
+  // Create a selection highlight ring around the base (hidden by default)
+  const ringGeo = new THREE.RingGeometry(0.038, 0.044, 32);
+  ringGeo.rotateX(-Math.PI / 2);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: SELECTION_RING_COLOR,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false,
+  });
+  const selectionRing = new THREE.Mesh(ringGeo, ringMat);
+  selectionRing.name = '_selectionRing';
+  selectionRing.position.y = 0.001; // slightly above base to avoid z-fighting
+  selectionRing.visible = false;
+  group.add(selectionRing);
+
+  return group;
 }
 
 /**
@@ -50,8 +75,15 @@ export function createDeviceMesh(type) {
  */
 export function setDeviceSelected(group) {
   group.traverse((obj) => {
-    if (obj.isMesh && obj.material && obj.material.emissive) {
-      obj.material.emissive.setHex(SELECTION_EMISSIVE);
+    if (obj.name === '_selectionRing') {
+      obj.visible = true;
+    } else if (obj.isMesh && obj.material && obj.material.emissive) {
+      if (!obj.userData.origEmissive) {
+        obj.userData.origEmissive = obj.material.emissive.getHex();
+        obj.userData.origEmissiveIntensity = obj.material.emissiveIntensity ?? 1.0;
+      }
+      obj.material.emissive.setHex(0x555555);
+      obj.material.emissiveIntensity = 0.8;
     }
   });
 }
@@ -62,8 +94,13 @@ export function setDeviceSelected(group) {
  */
 export function clearDeviceSelected(group) {
   group.traverse((obj) => {
-    if (obj.isMesh && obj.material && obj.material.emissive) {
-      obj.material.emissive.setHex(0x000000);
+    if (obj.name === '_selectionRing') {
+      obj.visible = false;
+    } else if (obj.isMesh && obj.material && obj.material.emissive) {
+      const orig = obj.userData.origEmissive !== undefined ? obj.userData.origEmissive : 0x000000;
+      const origIntensity = obj.userData.origEmissiveIntensity !== undefined ? obj.userData.origEmissiveIntensity : 1.0;
+      obj.material.emissive.setHex(orig);
+      obj.material.emissiveIntensity = origIntensity;
     }
   });
 }

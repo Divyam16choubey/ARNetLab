@@ -2,7 +2,7 @@ import { Route } from 'lucide-react';
 
 /**
  * Route calculation status panel.
- * Phase 1: static placeholder showing no route is active.
+ * Phase 3: indicates device placement is active; routing is planned for Phase 4.
  */
 export default function RouteStatus() {
   return (
@@ -12,11 +12,10 @@ export default function RouteStatus() {
         <span className="text-sm font-semibold">Route Status</span>
       </div>
       <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
-        No route calculated. Build a network and select source/destination
-        nodes to calculate routing.
+        No route calculated. Place devices in AR mode. Graph connections and shortest-path routing will be introduced in Phase 4.
       </p>
       <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-2 italic">
-        Routing will be available in a future update.
+        Routing algorithm: Dijkstra (coming in Phase 4)
       </p>
     </div>
   );

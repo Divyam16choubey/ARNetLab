@@ -118,19 +118,20 @@ export class DeviceManager {
    * @returns {string|null} — nodeId of the hit device, or null
    */
   getDeviceAtScreenPoint(camera, ndcX, ndcY) {
+    if (!camera) return null;
     this._raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
 
-    // Collect all meshes (excluding sprites/labels)
+    // Collect all meshes (excluding sprites/labels and selection indicators)
     const meshes = [];
     for (const group of this._devices.values()) {
       group.traverse((obj) => {
-        if (obj.isMesh) meshes.push(obj);
+        if (obj.isMesh && obj.name !== '_selectionRing') meshes.push(obj);
       });
     }
 
     if (meshes.length === 0) return null;
 
-    const intersects = this._raycaster.intersectObjects(meshes, false);
+    const intersects = this._raycaster.intersectObjects(meshes, true);
     if (intersects.length === 0) return null;
 
     // Walk up from the intersected mesh to find the device group
@@ -143,6 +144,23 @@ export class DeviceManager {
     }
 
     return null;
+  }
+
+  /**
+   * Get the world position of a placed device.
+   * @param {string} nodeId
+   * @returns {{x: number, y: number, z: number}|null}
+   */
+  getNodePosition(nodeId) {
+    const group = this._devices.get(nodeId);
+    if (!group) return null;
+    const pos = new THREE.Vector3();
+    pos.setFromMatrixPosition(group.matrix);
+    return {
+      x: Number(pos.x.toFixed(3)),
+      y: Number(pos.y.toFixed(3)),
+      z: Number(pos.z.toFixed(3)),
+    };
   }
 
   /**

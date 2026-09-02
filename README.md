@@ -4,13 +4,13 @@
 
 **ARNetLab: An Interactive Augmented Reality Platform for Network Topology Visualization and Routing** is an educational project for exploring computer-network topologies in a physical space. The intended experience is to place virtual devices such as PCs, switches, routers, and servers on a real surface, connect them, and observe a route between selected devices.
 
-## Current Status — Phase 2 (WebXR AR)
+## Current Status — Phase 3 (3D Network Devices & AR Placement)
 
-Phase 2 adds **real Augmented Reality** to the application using the WebXR Device API and Three.js. Users on supported mobile devices can enter an immersive AR session, detect horizontal surfaces, and place a workspace anchor on their desk or table.
+Phase 3 transforms the placed AR workspace into an interactive **3D network device visualization environment**. Users on supported mobile devices can enter WebXR AR mode, detect horizontal surfaces, anchor the workspace, select network device types, place distinct 3D devices into the physical world, select placed devices with raycasting, inspect device properties, delete individual devices, and reset the network workspace.
 
 ### Implemented
 
-#### Phase 1 — Foundation
+#### Phase 1 — Foundation & UI
 - Responsive landing page with project overview, capabilities, and workflow sections
 - Mobile-first responsive design (mobile, tablet, desktop)
 - Dark and light theme with localStorage persistence
@@ -20,7 +20,7 @@ Phase 2 adds **real Augmented Reality** to the application using the WebXR Devic
 - Client-side routing (React Router v6)
 - Tailwind CSS design token system, animation system, accessible controls
 
-#### Phase 2 — WebXR AR
+#### Phase 2 — WebXR & Real AR
 - **WebXR availability detection** — checks `navigator.xr` and `immersive-ar` support
 - **AR support UI** — clear status messages for supported, unsupported, and error states
 - **Immersive-ar session** — full WebXR session lifecycle (start, render loop, end)
@@ -35,18 +35,36 @@ Phase 2 adds **real Augmented Reality** to the application using the WebXR Devic
 - **Error handling** — graceful messages for permission denied, unsupported devices, session failures
 - **Mobile UX** — touch-friendly controls, safe-area padding, 48px touch targets
 
+#### Phase 3 — 3D Devices & Object Management
+- **Procedural 3D device models** — lightweight geometry (~50–200 vertices per device) with `MeshStandardMaterial` for 4 distinct device types:
+  - **PC:** Monitor screen, stand, base plate (`#3b82f6`)
+  - **Switch:** Low-profile rack chassis, RJ45 port representations, status LED (`#22c55e`)
+  - **Router:** Compact router body, dual angled antennas, status LEDs (`#f59e0b`)
+  - **Server:** Server rack unit with horizontal slot divider lines and status indicators (`#a855f7`)
+- **AR Device Placement** — user selects a device type from the mobile AR palette and taps detected surfaces to instantiate anchored 3D models at the exact hit-test transform.
+- **Three.js Raycasting Object Selection** — taps on existing placed devices perform NDC camera raycasting against device meshes.
+- **Visual Selection Feedback** — selected devices display an active cyan base highlight ring and emissive material glow.
+- **Floating Text Labels** — dynamic canvas-generated billboard sprite labels (e.g. `PC-01`, `SWITCH-01`, `ROUTER-01`, `SERVER-01`) floating directly above each device with stable sequential numbering.
+- **Contextual Device Info Card** — selecting a device presents an overlay card displaying device name, device type badge, 3D world coordinates, a `Delete Device` action, and a `Deselect` button.
+- **Device Deletion** — removes device mesh, label sprite, and React state, properly disposing of geometries and materials.
+- **Dual Reset System**:
+  - `Reset Network`: Clears all placed 3D devices and node state while preserving the AR workspace platform and active WebXR session.
+  - `Reset Workspace`: Clears the workspace platform and devices, returning to surface scanning mode.
+- **Interactive UI Palette & Toolbar** — mobile AR floating bottom palette and desktop sidebar selector bound to active device selection.
+
 ### Not Implemented (Planned for Future Phases)
 
 | Feature | Target Phase |
 |---------|-------------|
-| 3D network device models (PC, Switch, Router, Server) | Phase 3 |
-| Device placement on AR surfaces | Phase 3 |
-| Network graph state management | Phase 3 |
-| Device connections and edge creation | Phase 3 |
-| Shortest-path routing algorithm | Phase 4 |
-| Packet visualization and animation | Phase 5 |
+| Network graph topology & device connections | Phase 4 |
+| Edge weight calculation (Euclidean 3D distance) | Phase 4 |
+| Source and destination device selection | Phase 4 |
+| Dijkstra shortest-path routing algorithm | Phase 4 |
+| Route path visualization and highlighting | Phase 4 |
+| Virtual packet simulation & hop animation | Phase 5 |
+| Dynamic topology updates & route recalculation | Phase 5 |
 
-> **Important:** No network devices, routing algorithms, or packet simulation exist yet. The AR placement currently creates a neutral workspace anchor, not network devices.
+> **Important Boundary:** Phase 3 strictly implements 3D device geometry, placement, selection, labels, deletion, and workspace management. Network connections, graph algorithms, Dijkstra routing, and packet animation are not part of Phase 3 and will be introduced in Phase 4 and Phase 5.
 
 ## Technology Stack
 
@@ -71,28 +89,31 @@ ARNetLab/
 │   │   ├── ARManager.js        #   WebXR session lifecycle, Three.js renderer
 │   │   ├── HitTestManager.js   #   Surface detection via hit-test
 │   │   ├── ReticleManager.js   #   Placement reticle mesh
-│   │   └── PlacementManager.js #   Workspace anchor placement
+│   │   ├── PlacementManager.js #   Workspace anchor platform mesh
+│   │   ├── DeviceFactory.js    #   Procedural 3D device geometry (PC, Switch, Router, Server)
+│   │   ├── DeviceManager.js    #   Scene device registry, raycasting, selection
+│   │   └── LabelManager.js     #   Canvas-backed billboard sprite text labels
 │   ├── components/
-│   │   ├── ar/                 # AR-specific UI (AROverlay.jsx)
+│   │   ├── ar/                 # AR-specific UI (AROverlay.jsx with device palette & inspector)
 │   │   ├── common/             # Button, Card, Badge, Modal, StatusIndicator
 │   │   ├── layout/             # Navbar, Footer, MobileMenu, PageHeader
 │   │   ├── ui/                 # ThemeToggle, EmptyState, LoadingState
-│   │   └── network/            # NetworkToolbar, NodeTypeSelector, etc.
+│   │   └── network/            # NetworkToolbar, NodeTypeSelector, NetworkControls, etc.
 │   ├── pages/
 │   │   ├── HomePage.jsx
-│   │   ├── ARLabPage.jsx       # Two modes: default placeholder / AR active
+│   │   ├── ARLabPage.jsx       # AR viewport & desktop fallback mode
 │   │   ├── HowItWorksPage.jsx
 │   │   └── AboutPage.jsx
 │   ├── hooks/
 │   │   ├── useTheme.js
-│   │   └── useAR.js
+│   │   └── useAR.js            # Unified AR and network device hook
 │   ├── context/
 │   │   ├── ThemeContext.jsx
-│   │   └── ARContext.jsx       # React ↔ AR bridge (state only on events)
+│   │   └── ARContext.jsx       # AR session & network node state management
 │   ├── constants/
-│   │   └── networkTypes.js
+│   │   └── networkTypes.js     # Device types, colors, icons, config
 │   ├── types/
-│   │   └── network.js
+│   │   └── network.js          # JSDoc type contracts
 │   ├── styles/
 │   │   └── globals.css         # Tailwind base, utilities, and scrollbar styles
 │   ├── App.jsx
@@ -138,20 +159,17 @@ npm run build
 
 WebXR requires a **secure context** (HTTPS or localhost). To test on a mobile device:
 
-### Option 1: Vite Network Access
-```bash
-npm run dev -- --host
-```
-This exposes the dev server on your local network. However, WebXR requires HTTPS on non-localhost origins, so you will need to either:
-- Use Chrome DevTools port forwarding (recommended), or
-- Configure Vite with a self-signed SSL certificate
-
-### Option 2: Chrome DevTools Port Forwarding (Recommended)
+### Option 1: Chrome DevTools Port Forwarding (Recommended)
 1. Connect your Android device via USB
 2. Enable USB debugging on the device
 3. Open `chrome://inspect` in desktop Chrome
 4. Set up port forwarding: `5173` → `localhost:5173`
 5. On the device, open Chrome and navigate to `http://localhost:5173/ar-lab`
+
+### Option 2: Local Network Access
+```bash
+npm run dev -- --host
+```
 
 ### Device Requirements
 - **Android** device with ARCore support
@@ -159,45 +177,56 @@ This exposes the dev server on your local network. However, WebXR requires HTTPS
 - Camera permission must be granted
 
 ### Desktop Fallback
-On desktop browsers (which lack WebXR AR support), the AR Lab page shows a clear "AR is not supported" message with the standard Phase 1 placeholder UI.
+On desktop browsers (which lack WebXR AR support), the AR Lab page shows a clear "AR is not supported" status with an interactive device type selector, network toolbar, and roadmap information.
 
 ## Pages
 
 | Route | Page | Description |
 |-------|------|-------------|
 | `/` | Home | Landing page with hero, capabilities, and workflow overview |
-| `/ar-lab` | AR Lab | AR workspace — Enter AR on mobile, placeholder on desktop |
+| `/ar-lab` | AR Lab | AR workspace — Enter AR on mobile, interactive preview on desktop |
 | `/how-it-works` | How It Works | Step-by-step walkthrough of the planned AR experience |
 | `/about` | About | Project overview, tech stack, and development status |
 
 ## AR Architecture
 
 ```
-React (UI layer)          Vanilla JS (XR frame loop)
-─────────────────         ───────────────────────────
-ARContext.jsx ──────────► ARManager.js
-  ├─ support state          ├─ Three.js renderer
-  ├─ session state          ├─ XR session lifecycle
-  ├─ hitTest state          ├─ render loop
-  └─ placement state      HitTestManager.js
-                             ├─ XRHitTestSource
-                             └─ per-frame pose extraction
-                           ReticleManager.js
-                             └─ ring mesh on surfaces
-                           PlacementManager.js
-                             └─ workspace anchor mesh
+React (UI layer)                Vanilla JS (XR frame loop)
+─────────────────               ───────────────────────────
+ARContext.jsx ────────────────► ARManager.js
+  ├─ session state                ├─ Three.js renderer
+  ├─ hitTest state                ├─ XR session lifecycle
+  ├─ placement state              ├─ render loop
+  ├─ nodes state (PC, Switch...) HitTestManager.js
+  ├─ selectedNodeId               ├─ XRHitTestSource
+  └─ selectedDeviceType           └─ per-frame pose extraction
+                                 ReticleManager.js
+                                  └─ ring mesh on surfaces
+                                 PlacementManager.js
+                                  └─ workspace anchor platform
+                                 DeviceFactory.js
+                                  └─ procedural 3D meshes
+                                 DeviceManager.js
+                                  ├─ scene node registry
+                                  ├─ Three.js raycasting
+                                  └─ selection highlight
+                                 LabelManager.js
+                                  └─ floating sprite labels
 ```
 
-React state is **only updated on discrete events** (session start/end, placement, errors). The XR frame loop runs in vanilla JavaScript with zero React re-renders per frame.
+React state is **only updated on discrete events** (session start/end, placement, selection, deletion, reset). The XR frame loop runs in vanilla JavaScript with zero React re-renders per frame.
 
 ## Documentation
 
 - [Project report](Documentation/ARNetLab_Report.pdf)
 - [Project slides](Documentation/ARNetLab_Slides.pdf)
 
-## Next Steps (Phase 3)
+## Next Steps (Phase 4)
 
-1. Create 3D models for network devices (PC, Switch, Router, Server)
-2. Enable device type selection and placement on AR surfaces
-3. Implement network graph state management
-4. Add device connections and edge visualization
+1. Implement network graph data structure (nodes, adjacencies, edge weights)
+2. Add device connection creation tool (connect 2 placed devices with 3D lines)
+3. Calculate Euclidean distance weights between placed devices in AR space
+4. Implement Dijkstra's shortest-path algorithm
+5. Add Source and Destination selection controls
+6. Visualize calculated shortest paths in AR with glowing route highlights
+

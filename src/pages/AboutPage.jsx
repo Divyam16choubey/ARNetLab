@@ -25,25 +25,28 @@ const IMPLEMENTED = [
   'AR Lab workspace with real WebXR AR mode',
   'WebXR immersive-ar session lifecycle',
   'AR support detection and compatibility UI',
-  'WebXR hit testing for surface detection',
-  'Placement reticle on detected surfaces',
+  'WebXR hit testing for real-time surface detection',
+  'Placement reticle tracking detected surfaces',
   'Tap-to-place AR workspace anchor',
-  'Reset placement and Exit AR controls',
-  'Mobile-first responsive design',
+  'Procedural 3D network device models (PC, Switch, Router, Server)',
+  'Interactive device placement on detected horizontal surfaces',
+  'Three.js raycasting object selection with glow highlight',
+  'Auto-generated floating text labels (e.g. PC-01, ROUTER-01)',
+  'Contextual device inspector card with live deletion',
+  'Dual reset system: Reset Network vs Reset Workspace',
+  'Mobile-first touch controls with safe-area padding',
   'Dark and light theme with persistence',
   'Reusable UI component library',
-  'Network device type constants and UI foundations',
   'Page routing (Home, AR Lab, How It Works, About)',
-  'Accessible navigation with mobile menu',
 ];
 
 const PLANNED = [
-  { feature: '3D network device models (PC, Switch, Router, Server)', phase: 3 },
-  { feature: 'Device placement on AR surfaces', phase: 3 },
-  { feature: 'Network graph state management', phase: 3 },
-  { feature: 'Device connections and edge creation', phase: 3 },
-  { feature: 'Shortest-path routing algorithm', phase: 4 },
-  { feature: 'Packet visualization and animation', phase: 5 },
+  { feature: 'Network graph representation and node connections', phase: 4 },
+  { feature: 'Edge weight calculation (Euclidean 3D distance)', phase: 4 },
+  { feature: 'Dijkstra shortest-path routing algorithm', phase: 4 },
+  { feature: 'Source and destination node route highlighting', phase: 4 },
+  { feature: 'Packet visualization and hop animation', phase: 5 },
+  { feature: 'Dynamic topology updates and route recalculation', phase: 5 },
 ];
 
 export default function AboutPage() {
@@ -102,7 +105,7 @@ export default function AboutPage() {
           <div>
             <h2 className="flex items-center gap-3 text-xl font-bold mb-5 text-neutral-900 dark:text-neutral-50 [&_svg]:text-primary-500 [&_svg]:shrink-0">
               <CheckCircle2 size={22} />
-              Implemented (Phase 1 &amp; 2)
+              Implemented (Phase 1, 2 &amp; 3)
             </h2>
             <ul className="flex flex-col gap-3">
               {IMPLEMENTED.map((item) => (

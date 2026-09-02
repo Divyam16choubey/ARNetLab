@@ -29,7 +29,6 @@ export default function ARLabPage() {
     placement,
     errorMessage,
     startAR,
-    endAR,
     onTap,
   } = useAR();
 
@@ -47,11 +46,16 @@ export default function ARLabPage() {
     }
   }, [startAR]);
 
-  const handleCanvasTap = useCallback(() => {
-    if (session === 'active') {
-      onTap();
-    }
-  }, [session, onTap]);
+  const handleCanvasTap = useCallback(
+    (e) => {
+      if (session === 'active') {
+        const clientX = e.clientX ?? (e.touches && e.touches[0]?.clientX);
+        const clientY = e.clientY ?? (e.touches && e.touches[0]?.clientY);
+        onTap(clientX, clientY);
+      }
+    },
+    [session, onTap]
+  );
 
   // ---- Render support status for the placeholder ----
 
@@ -138,7 +142,7 @@ export default function ARLabPage() {
                   AR Lab
                 </span>
                 <Badge variant={session === 'error' ? 'warning' : 'info'}>
-                  Phase 2 — WebXR AR
+                  Phase 3 — 3D Network Devices
                 </Badge>
               </div>
             </div>
