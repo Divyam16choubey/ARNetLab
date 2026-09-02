@@ -11,29 +11,29 @@ Phase 2 adds **real Augmented Reality** to the application using the WebXR Devic
 ### Implemented
 
 #### Phase 1 — Foundation
-- ✅ Responsive landing page with project overview, capabilities, and workflow sections
-- ✅ Mobile-first responsive design (mobile, tablet, desktop)
-- ✅ Dark and light theme with localStorage persistence
-- ✅ Reusable UI component library (Button, Card, Badge, Modal, StatusIndicator, EmptyState, LoadingState)
-- ✅ Network UI component foundations (NetworkToolbar, NodeTypeSelector, NetworkControls, RouteStatus, NetworkLegend)
-- ✅ Responsive navbar with mobile slide-in menu
-- ✅ Client-side routing (React Router v6)
-- ✅ CSS design token system, animation system, accessible controls
+- Responsive landing page with project overview, capabilities, and workflow sections
+- Mobile-first responsive design (mobile, tablet, desktop)
+- Dark and light theme with localStorage persistence
+- Reusable UI component library (Button, Card, Badge, Modal, StatusIndicator, EmptyState, LoadingState)
+- Network UI component foundations (NetworkToolbar, NodeTypeSelector, NetworkControls, RouteStatus, NetworkLegend)
+- Responsive navbar with mobile slide-in menu
+- Client-side routing (React Router v6)
+- CSS design token system, animation system, accessible controls
 
 #### Phase 2 — WebXR AR
-- ✅ **WebXR availability detection** — checks `navigator.xr` and `immersive-ar` support
-- ✅ **AR support UI** — clear status messages for supported, unsupported, and error states
-- ✅ **Immersive-ar session** — full WebXR session lifecycle (start, render loop, end)
-- ✅ **Three.js integration** — WebGLRenderer with XR enabled, scene, camera, lighting
-- ✅ **Hit testing** — WebXR hit-test source detects horizontal surfaces in real-time
-- ✅ **Placement reticle** — teal ring follows detected surfaces, hides when no surface found
-- ✅ **Tap-to-place** — places a workspace anchor (indigo platform) at the reticle position
-- ✅ **Reset placement** — removes anchor, resumes surface detection
-- ✅ **Exit AR** — ends session, disposes resources, returns to normal UI
-- ✅ **AR overlay** — floating status messages and controls during AR (glass-blur design)
-- ✅ **Performance-optimized** — XR frame loop runs in vanilla JS, no React re-renders per frame
-- ✅ **Error handling** — graceful messages for permission denied, unsupported devices, session failures
-- ✅ **Mobile UX** — touch-friendly controls, safe-area padding, 48px touch targets
+- **WebXR availability detection** — checks `navigator.xr` and `immersive-ar` support
+- **AR support UI** — clear status messages for supported, unsupported, and error states
+- **Immersive-ar session** — full WebXR session lifecycle (start, render loop, end)
+- **Three.js integration** — WebGLRenderer with XR enabled, scene, camera, lighting
+- **Hit testing** — WebXR hit-test source detects horizontal surfaces in real-time
+- **Placement reticle** — teal ring follows detected surfaces, hides when no surface found
+- **Tap-to-place** — places a workspace anchor (indigo platform) at the reticle position
+- **Reset placement** — removes anchor, resumes surface detection
+- **Exit AR** — ends session, disposes resources, returns to normal UI
+- **AR overlay** — floating status messages and controls during AR (glass-blur design)
+- **Performance-optimized** — XR frame loop runs in vanilla JS, no React re-renders per frame
+- **Error handling** — graceful messages for permission denied, unsupported devices, session failures
+- **Mobile UX** — touch-friendly controls, safe-area padding, 48px touch targets
 
 ### Not Implemented (Planned for Future Phases)
 
