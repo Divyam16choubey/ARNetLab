@@ -18,8 +18,8 @@ import {
   setDeviceSelected,
   clearDeviceSelected,
   setDeviceRoleVisual,
-} from './DeviceFactory';
-import { createLabelSprite, disposeLabelSprite } from './LabelManager';
+} from './DeviceFactory.js';
+import { createLabelSprite, disposeLabelSprite } from './LabelManager.js';
 
 export class DeviceManager {
   constructor() {
@@ -56,6 +56,7 @@ export class DeviceManager {
     const group = createDeviceMesh(type);
     group.matrixAutoUpdate = false;
     group.matrix.copy(poseMatrix);
+    group.updateMatrixWorld(true);
     group.userData.nodeId = nodeId;
     group.userData.deviceType = type;
 

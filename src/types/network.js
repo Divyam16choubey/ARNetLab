@@ -1,9 +1,8 @@
 /**
  * ARNetLab — Type Definitions (JSDoc)
  *
- * These types define the data models for future network visualization.
- * They are not used in Phase 1 logic but establish the contract
- * for Phase 2+ implementation.
+ * Core type definitions and contracts for network visualization,
+ * device nodes, weighted edges, and routing topologies.
  */
 
 /**

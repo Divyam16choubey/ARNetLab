@@ -210,7 +210,7 @@ export class PacketSimulator {
     const fromId = this.routeNodeIds[this.currentEdgeIndex];
     const toId = this.routeNodeIds[this.currentEdgeIndex + 1];
 
-    // Topology Safety: Verify ALL remaining nodes and edges in the active route still exist
+    // Topology Safety: Verify active segment endpoints and link still exist in O(1) time
     if (!graph) {
       this._setError('Graph unavailable during simulation.');
       return {

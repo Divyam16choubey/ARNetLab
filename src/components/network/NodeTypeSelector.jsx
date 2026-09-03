@@ -11,7 +11,7 @@ const ICON_MAP = {
 
 /**
  * Visual selector for network device types.
- * Phase 3: Interactive device type selector for AR placement.
+ * Interactive device type selector for AR placement.
  */
 export default function NodeTypeSelector() {
   const { selectedDeviceType, selectDeviceType } = useAR();
@@ -19,7 +19,7 @@ export default function NodeTypeSelector() {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-3">
-        Device Types (Phase 3)
+        Device Palette
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2">
         {NODE_TYPE_LIST.map(({ type, label, color, icon }) => {

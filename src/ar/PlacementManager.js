@@ -4,9 +4,8 @@
  * Manages the AR workspace anchor — a simple visual platform placed
  * on a detected surface when the user taps.
  *
- * Phase 2: The placed object is a neutral workspace indicator
- * (subtle grid/platform). Actual network device models belong
- * to Phase 3.
+ * The placed object serves as a neutral workspace anchor platform
+ * on which network devices and topological connections are constructed.
  *
  * Responsibilities:
  * - Place a workspace anchor at the reticle's current pose

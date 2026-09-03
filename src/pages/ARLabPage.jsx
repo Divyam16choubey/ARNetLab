@@ -46,11 +46,39 @@ export default function ARLabPage() {
     }
   }, [startAR]);
 
-  const handleCanvasTap = useCallback(
+  // Track global pointer/touch coordinates to provide accurate coordinates to WebXR select events
+  useEffect(() => {
+    const handlePointerDown = (e) => {
+      if (typeof window !== 'undefined') {
+        window.__lastPointerX = e.clientX;
+        window.__lastPointerY = e.clientY;
+      }
+    };
+    const handleTouchStart = (e) => {
+      if (typeof window !== 'undefined' && e.touches && e.touches[0]) {
+        window.__lastPointerX = e.touches[0].clientX;
+        window.__lastPointerY = e.touches[0].clientY;
+      }
+    };
+    window.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, []);
+
+  const handleCanvasInteraction = useCallback(
     (e) => {
       if (session === 'active') {
-        const clientX = e.clientX ?? (e.touches && e.touches[0]?.clientX);
-        const clientY = e.clientY ?? (e.touches && e.touches[0]?.clientY);
+        const clientX =
+          e.clientX ??
+          (e.changedTouches && e.changedTouches[0]?.clientX) ??
+          (e.touches && e.touches[0]?.clientX);
+        const clientY =
+          e.clientY ??
+          (e.changedTouches && e.changedTouches[0]?.clientY) ??
+          (e.touches && e.touches[0]?.clientY);
         onTap(clientX, clientY);
       }
     },
@@ -119,7 +147,8 @@ export default function ARLabPage() {
             ? 'block fixed inset-0 w-full h-full z-[299] [touch-action:none]'
             : 'hidden'
         }`}
-        onClick={handleCanvasTap}
+        onClick={handleCanvasInteraction}
+        onPointerUp={handleCanvasInteraction}
         aria-label="AR viewport"
       />
 
@@ -141,8 +170,8 @@ export default function ARLabPage() {
                 <span className="text-base font-semibold text-neutral-900 dark:text-neutral-50">
                   AR Lab
                 </span>
-                <Badge variant={session === 'error' ? 'warning' : 'info'}>
-                  Phase 7 — Finalized &amp; Ready
+                <Badge variant={session === 'error' ? 'warning' : 'success'}>
+                  Interactive Workspace
                 </Badge>
               </div>
             </div>

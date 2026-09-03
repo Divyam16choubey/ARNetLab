@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   X,
   RotateCcw,
@@ -64,6 +65,19 @@ export default function AROverlay() {
     resetNetwork,
     resetPlacement,
   } = useAR();
+
+  // Prevent UI clicks in DOM overlay from triggering accidental WebXR 3D scene placement
+  useEffect(() => {
+    const handleBeforeXRSelect = (e) => {
+      if (e.target.closest('button, a, input, [role="button"], [data-overlay-control]')) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforexrselect', handleBeforeXRSelect);
+    return () => {
+      window.removeEventListener('beforexrselect', handleBeforeXRSelect);
+    };
+  }, []);
 
   if (session !== 'active' && session !== 'starting') return null;
 
@@ -176,7 +190,7 @@ export default function AROverlay() {
           </div>
         )}
 
-        {/* Phase 4 Interaction Mode Switcher */}
+        {/* Interaction Mode Switcher */}
         {placement === 'placed' && (
           <div className="flex items-center gap-1 p-1 bg-black/70 backdrop-blur-xl border border-white/15 rounded-2xl shadow-xl mt-1">
             <button

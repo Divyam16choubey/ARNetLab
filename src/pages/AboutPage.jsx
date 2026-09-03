@@ -82,9 +82,10 @@ export default function AboutPage() {
             how devices connect, and how data is routed through a topology.
           </p>
           <p className="mt-3">
-            The project is being developed in phases, starting with the UI
-            foundation and progressively adding AR integration, 3D
-            rendering, network logic, and packet simulation.
+            ARNetLab integrates browser-based WebXR technology, Three.js 3D
+            rendering, custom graph data structures, Dijkstra shortest-path
+            routing algorithms, and real-time packet physics into a cohesive,
+            hands-on educational tool.
           </p>
         </Card>
       </section>
@@ -119,7 +120,7 @@ export default function AboutPage() {
           <div>
             <h2 className="flex items-center gap-3 text-xl font-bold mb-5 text-neutral-900 dark:text-neutral-50 [&_svg]:text-primary-500 [&_svg]:shrink-0">
               <CheckCircle2 size={22} />
-              Implemented (Phases 1–7)
+              Platform Capabilities
             </h2>
             <ul className="flex flex-col gap-3">
               {IMPLEMENTED.map((item) => (
@@ -138,7 +139,7 @@ export default function AboutPage() {
           <div>
             <h2 className="flex items-center gap-3 text-xl font-bold mb-5 text-neutral-900 dark:text-neutral-50 [&_svg]:text-primary-500 [&_svg]:shrink-0">
               <Clock size={22} />
-              Planned (Future Phases)
+              Future Roadmap
             </h2>
             <ul className="flex flex-col gap-3">
               {PLANNED.map(({ feature, phase }) => (
@@ -148,7 +149,7 @@ export default function AboutPage() {
                 >
                   <Clock size={16} className="text-neutral-400 dark:text-neutral-500 shrink-0 mt-0.5" />
                   <span>{feature}</span>
-                  <Badge variant="upcoming">Phase {phase}</Badge>
+                  <Badge variant="upcoming">{phase}</Badge>
                 </li>
               ))}
             </ul>

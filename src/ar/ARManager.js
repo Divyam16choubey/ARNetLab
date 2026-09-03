@@ -37,9 +37,12 @@ export class ARManager {
     this.onSessionEndCallback = null;
 
     this._isDisposed = false;
+    this._controller = null;
+    this.onSelectCallback = null;
     this._boundOnFrame = this._onXRFrame.bind(this);
     this._boundOnResize = this._onResize.bind(this);
     this._boundSessionEnd = this._handleSessionEnd.bind(this);
+    this._boundOnSelect = this._onXRSelect.bind(this);
   }
 
   /**
@@ -59,14 +62,16 @@ export class ARManager {
    * Start an immersive-ar WebXR session.
    * @param {HTMLCanvasElement} canvas — the canvas element to render into
    * @param {Object} callbacks
-   * @param {(frame: XRFrame) => void} callbacks.onFrame — called each XR frame
+   * @param {(frame: XRFrame, time: number) => void} callbacks.onFrame — called each XR frame
    * @param {() => void} callbacks.onSessionEnd — called when session ends
+   * @param {(event: Event) => void} callbacks.onSelect — called when WebXR screen select fires
    * @returns {Promise<void>}
    */
-  async startSession(canvas, { onFrame, onSessionEnd } = {}) {
+  async startSession(canvas, { onFrame, onSessionEnd, onSelect } = {}) {
     this.canvas = canvas;
     this.onFrameCallback = onFrame || null;
     this.onSessionEndCallback = onSessionEnd || null;
+    this.onSelectCallback = onSelect || null;
 
     // Create Three.js renderer
     this.renderer = new THREE.WebGLRenderer({
@@ -95,26 +100,56 @@ export class ARManager {
     directionalLight.position.set(0.5, 1, 0.5);
     this.scene.add(directionalLight);
 
-    // Request immersive-ar session with hit-test
-    const sessionInit = {
-      requiredFeatures: ['hit-test'],
-      optionalFeatures: ['dom-overlay', 'local', 'local-floor'],
-    };
+    // Configure WebXR session.
+    // On Android Chrome (e.g. Samsung Galaxy Tab S9 FE), domOverlay root must be supplied
+    // so Chrome can activate DOM overlay mode; otherwise standard WebXR compositor takes over.
+    const overlayRoot =
+      typeof document !== 'undefined'
+        ? document.getElementById('root') || document.body
+        : null;
 
-    try {
-      this.session = await navigator.xr.requestSession(
-        'immersive-ar',
-        sessionInit
-      );
-    } catch (err) {
-      this.dispose();
-      throw new Error(
-        `AR could not be started. ${err.message || 'Camera permission may have been denied.'}`
-      );
+    let session = null;
+    if (overlayRoot) {
+      try {
+        const sessionInitWithOverlay = {
+          requiredFeatures: ['hit-test'],
+          optionalFeatures: ['dom-overlay', 'local', 'local-floor'],
+          domOverlay: { root: overlayRoot },
+        };
+        session = await navigator.xr.requestSession(
+          'immersive-ar',
+          sessionInitWithOverlay
+        );
+      } catch (overlayErr) {
+        console.warn(
+          'Could not start immersive-ar with dom-overlay, falling back to base session:',
+          overlayErr
+        );
+      }
     }
+
+    if (!session) {
+      const fallbackInit = {
+        requiredFeatures: ['hit-test'],
+        optionalFeatures: ['local', 'local-floor'],
+      };
+      try {
+        session = await navigator.xr.requestSession('immersive-ar', fallbackInit);
+      } catch (err) {
+        this.dispose();
+        throw new Error(
+          `AR could not be started. ${err.message || 'Camera permission may have been denied.'}`
+        );
+      }
+    }
+
+    this.session = session;
 
     // Listen for session end
     this.session.addEventListener('end', this._boundSessionEnd);
+
+    // Listen for WebXR screen select events (primary input on Android ARCore)
+    this.session.addEventListener('select', this._boundOnSelect);
 
     // Listen for window resize and orientation change
     window.addEventListener('resize', this._boundOnResize);
@@ -157,8 +192,29 @@ export class ARManager {
       this.viewerRefSpace = chosenRefSpace;
     }
 
+    // Set up XR controller for primary screen interaction in handheld AR
+    this._controller = this.renderer.xr.getController(0);
+    if (this._controller) {
+      this._controller.addEventListener('select', this._boundOnSelect);
+      this.scene.add(this._controller);
+    }
+
     // Start the render loop
     this.renderer.setAnimationLoop(this._boundOnFrame);
+  }
+
+  /**
+   * Internal WebXR select handler — triggered on screen taps in immersive AR.
+   * @param {Event} event
+   */
+  _onXRSelect(event) {
+    if (this.onSelectCallback) {
+      try {
+        this.onSelectCallback(event);
+      } catch (err) {
+        console.warn('Error in onSelectCallback:', err);
+      }
+    }
   }
 
   /**
@@ -227,13 +283,23 @@ export class ARManager {
   dispose() {
     this._isDisposed = true;
 
-    window.removeEventListener('resize', this._boundOnResize);
-    window.removeEventListener('orientationchange', this._boundOnResize);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', this._boundOnResize);
+      window.removeEventListener('orientationchange', this._boundOnResize);
+    }
 
     if (this.session) {
       try {
         this.session.removeEventListener('end', this._boundSessionEnd);
+        this.session.removeEventListener('select', this._boundOnSelect);
       } catch {}
+    }
+
+    if (this._controller) {
+      try {
+        this._controller.removeEventListener('select', this._boundOnSelect);
+      } catch {}
+      this._controller = null;
     }
 
     if (this.renderer) {
@@ -270,5 +336,6 @@ export class ARManager {
     this.canvas = null;
     this.onFrameCallback = null;
     this.onSessionEndCallback = null;
+    this.onSelectCallback = null;
   }
 }

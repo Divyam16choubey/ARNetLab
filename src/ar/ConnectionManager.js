@@ -78,7 +78,7 @@ export class ConnectionManager {
     const isPacketActive = this._activePacketEdgeId === edge.id;
     const mode = isPacketActive ? 'packet' : isRoute ? 'route' : 'normal';
 
-    const group = this._createConnectionGroup(pos1, pos2, mode);
+    const { group, cylinder, ring1, ring2 } = this._createConnectionGroup(pos1, pos2, mode);
     group.userData.edgeId = edge.id;
     group.userData.sourceId = edge.source;
     group.userData.targetId = edge.target;
@@ -87,6 +87,9 @@ export class ConnectionManager {
 
     this._connections.set(edge.id, {
       group,
+      cylinder,
+      ring1,
+      ring2,
       edge,
       pos1: { ...pos1 },
       pos2: { ...pos2 },
@@ -145,24 +148,9 @@ export class ConnectionManager {
       const isPacketActive = this._activePacketEdgeId === edgeId;
       const targetMode = isPacketActive ? 'packet' : isRoute ? 'route' : 'normal';
 
-      const currentMode = entry.isPacketActive ? 'packet' : entry.isHighlighted ? 'route' : 'normal';
-
-      if (currentMode !== targetMode) {
-        if (scene && entry.group) {
-          scene.remove(entry.group);
-          this._disposeGroup(entry.group);
-        }
-
-        const newGroup = this._createConnectionGroup(entry.pos1, entry.pos2, targetMode);
-        newGroup.userData.edgeId = edgeId;
-        newGroup.userData.sourceId = entry.edge.source;
-        newGroup.userData.targetId = entry.edge.target;
-
-        scene.add(newGroup);
-        entry.group = newGroup;
-        entry.isHighlighted = isRoute;
-        entry.isPacketActive = isPacketActive;
-      }
+      this._updateConnectionStyle(entry, targetMode);
+      entry.isHighlighted = isRoute;
+      entry.isPacketActive = isPacketActive;
     }
   }
 
@@ -182,19 +170,7 @@ export class ConnectionManager {
     if (prevEdgeId && this._connections.has(prevEdgeId)) {
       const prevEntry = this._connections.get(prevEdgeId);
       const targetMode = this._routeEdgeIds.has(prevEdgeId) ? 'route' : 'normal';
-
-      if (scene && prevEntry.group) {
-        scene.remove(prevEntry.group);
-        this._disposeGroup(prevEntry.group);
-      }
-
-      const restoredGroup = this._createConnectionGroup(prevEntry.pos1, prevEntry.pos2, targetMode);
-      restoredGroup.userData.edgeId = prevEdgeId;
-      restoredGroup.userData.sourceId = prevEntry.edge.source;
-      restoredGroup.userData.targetId = prevEntry.edge.target;
-
-      scene.add(restoredGroup);
-      prevEntry.group = restoredGroup;
+      this._updateConnectionStyle(prevEntry, targetMode);
       prevEntry.isHighlighted = this._routeEdgeIds.has(prevEdgeId);
       prevEntry.isPacketActive = false;
     }
@@ -202,19 +178,7 @@ export class ConnectionManager {
     // Set new active packet edge
     if (edgeId && this._connections.has(edgeId)) {
       const entry = this._connections.get(edgeId);
-
-      if (scene && entry.group) {
-        scene.remove(entry.group);
-        this._disposeGroup(entry.group);
-      }
-
-      const activeGroup = this._createConnectionGroup(entry.pos1, entry.pos2, 'packet');
-      activeGroup.userData.edgeId = edgeId;
-      activeGroup.userData.sourceId = entry.edge.source;
-      activeGroup.userData.targetId = entry.edge.target;
-
-      scene.add(activeGroup);
-      entry.group = activeGroup;
+      this._updateConnectionStyle(entry, 'packet');
       entry.isHighlighted = this._routeEdgeIds.has(edgeId);
       entry.isPacketActive = true;
     }
@@ -230,29 +194,45 @@ export class ConnectionManager {
 
   /**
    * Clear all route highlights, returning all connections to normal appearance.
-   * @param {THREE.Scene} scene
+   * @param {THREE.Scene} [_scene]
    */
-  clearRouteHighlights(scene) {
+  clearRouteHighlights(_scene) {
     this._routeEdgeIds.clear();
     this._activePacketEdgeId = null;
 
-    for (const [edgeId, entry] of this._connections.entries()) {
-      if (entry.isHighlighted || entry.isPacketActive) {
-        if (scene && entry.group) {
-          scene.remove(entry.group);
-          this._disposeGroup(entry.group);
-        }
+    for (const entry of this._connections.values()) {
+      this._updateConnectionStyle(entry, 'normal');
+      entry.isHighlighted = false;
+      entry.isPacketActive = false;
+    }
+  }
 
-        const newGroup = this._createConnectionGroup(entry.pos1, entry.pos2, 'normal');
-        newGroup.userData.edgeId = edgeId;
-        newGroup.userData.sourceId = entry.edge.source;
-        newGroup.userData.targetId = entry.edge.target;
+  /**
+   * Mutate connection materials in-place to avoid WebGL reallocation during simulation.
+   * @private
+   */
+  _updateConnectionStyle(entry, mode) {
+    if (!entry) return;
+    const style = mode === 'packet' ? STYLE_ACTIVE_PACKET : mode === 'route' ? STYLE_ROUTE : STYLE_NORMAL;
+    const isRouteOrPacket = mode === 'route' || mode === 'packet';
 
-        scene.add(newGroup);
-        entry.group = newGroup;
-        entry.isHighlighted = false;
-        entry.isPacketActive = false;
-      }
+    if (entry.cylinder && entry.cylinder.material) {
+      entry.cylinder.material.color.setHex(style.color);
+      entry.cylinder.material.emissive.setHex(style.emissive);
+      entry.cylinder.material.emissiveIntensity = style.emissiveIntensity;
+      entry.cylinder.material.opacity = style.opacity;
+      const radiusRatio = style.cylinderRadius / STYLE_NORMAL.cylinderRadius;
+      entry.cylinder.scale.set(radiusRatio, 1, radiusRatio);
+    }
+
+    const ringColor = mode === 'packet' ? 0xfbbf24 : 0x34d399;
+    if (entry.ring1) {
+      entry.ring1.visible = isRouteOrPacket;
+      if (entry.ring1.material) entry.ring1.material.color.setHex(ringColor);
+    }
+    if (entry.ring2) {
+      entry.ring2.visible = isRouteOrPacket;
+      if (entry.ring2.material) entry.ring2.material.color.setHex(ringColor);
     }
   }
 
@@ -261,6 +241,7 @@ export class ConnectionManager {
    * @param {{x: number, y: number, z: number}} pos1
    * @param {{x: number, y: number, z: number}} pos2
    * @param {'normal'|'route'|'packet'} [mode='normal']
+   * @returns {{ group: THREE.Group, cylinder: THREE.Mesh|null, ring1: THREE.Mesh|null, ring2: THREE.Mesh|null }}
    * @private
    */
   _createConnectionGroup(pos1, pos2, mode = 'normal') {
@@ -274,12 +255,12 @@ export class ConnectionManager {
     const p2 = new THREE.Vector3(pos2.x, pos2.y + yOffset, pos2.z);
 
     const distance = p1.distanceTo(p2);
-    if (distance <= 0.001) return group;
+    if (distance <= 0.001) return { group, cylinder: null, ring1: null, ring2: null };
 
     // 3D cylinder mesh
     const geom = new THREE.CylinderGeometry(
-      style.cylinderRadius,
-      style.cylinderRadius,
+      STYLE_NORMAL.cylinderRadius,
+      STYLE_NORMAL.cylinderRadius,
       distance,
       8
     );
@@ -295,6 +276,8 @@ export class ConnectionManager {
     });
 
     const cylinder = new THREE.Mesh(geom, mat);
+    const radiusRatio = style.cylinderRadius / STYLE_NORMAL.cylinderRadius;
+    cylinder.scale.set(radiusRatio, 1, radiusRatio);
 
     // Position cylinder at midpoint
     const midpoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
@@ -310,27 +293,27 @@ export class ConnectionManager {
 
     group.add(cylinder);
 
-    // If highlighted route or active packet, add small end pulse rings at endpoints
-    if (isRouteOrPacket) {
-      const ringGeo = new THREE.RingGeometry(0.004, 0.007, 16);
-      const ringMat = new THREE.MeshBasicMaterial({
-        color: mode === 'packet' ? 0xfbbf24 : 0x34d399,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.9,
-      });
-      const ring1 = new THREE.Mesh(ringGeo, ringMat);
-      ring1.position.copy(p1);
-      ring1.lookAt(p2);
-      group.add(ring1);
+    // End pulse rings at endpoints
+    const ringGeo = new THREE.RingGeometry(0.004, 0.007, 16);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: mode === 'packet' ? 0xfbbf24 : 0x34d399,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.9,
+    });
+    const ring1 = new THREE.Mesh(ringGeo, ringMat);
+    ring1.position.copy(p1);
+    ring1.lookAt(p2);
+    ring1.visible = isRouteOrPacket;
+    group.add(ring1);
 
-      const ring2 = new THREE.Mesh(ringGeo, ringMat);
-      ring2.position.copy(p2);
-      ring2.lookAt(p1);
-      group.add(ring2);
-    }
+    const ring2 = new THREE.Mesh(ringGeo.clone(), ringMat.clone());
+    ring2.position.copy(p2);
+    ring2.lookAt(p1);
+    ring2.visible = isRouteOrPacket;
+    group.add(ring2);
 
-    return group;
+    return { group, cylinder, ring1, ring2 };
   }
 
   /**

@@ -23,28 +23,28 @@ const CAPABILITIES = [
     title: 'AR Device Placement',
     description:
       'Place virtual PCs, switches, routers, and servers on real-world surfaces using augmented reality.',
-    status: 'Implemented (Phase 3)',
+    status: 'Live AR Feature',
   },
   {
     icon: <Network size={22} />,
     title: 'Network Topology Builder',
     description:
       'Create 3D connections between devices to build undirected network graphs with real Euclidean distance weights.',
-    status: 'Implemented (Phase 4)',
+    status: 'Live AR Feature',
   },
   {
     icon: <Route size={22} />,
     title: 'Shortest Path Routing',
     description:
       'Select source and destination nodes, then compute and highlight the optimal Dijkstra route in 3D AR.',
-    status: 'Implemented (Phase 4)',
+    status: 'Live AR Feature',
   },
   {
     icon: <Eye size={22} />,
     title: 'Packet Visualization',
     description:
       'Watch a virtual packet travel along the computed route, animating through each hop in real time.',
-    status: 'Implemented (Phase 5)',
+    status: 'Live AR Feature',
   },
 ];
 
@@ -197,14 +197,13 @@ export default function HomePage() {
       <section className="py-20 bg-neutral-50 dark:bg-neutral-900" id="capabilities">
         <div className="container">
           <div className="text-center mb-12 flex flex-col items-center gap-4 animate-fade-in-up">
-            <Badge variant="upcoming">Under Development</Badge>
+            <Badge variant="info">Platform Capabilities</Badge>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
               Core Capabilities
             </h2>
             <p className="text-base text-neutral-600 dark:text-neutral-400 max-w-[600px] leading-relaxed">
-              These features are planned for upcoming phases of development.
-              The current version provides the application foundation and UI
-              structure.
+              Construct, connect, analyze, and simulate computer network architectures
+              interactively in true tabletop augmented reality.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -218,7 +217,7 @@ export default function HomePage() {
               >
                 <p>{description}</p>
                 <div className="mt-3">
-                  <Badge variant="upcoming">
+                  <Badge variant="success">
                     {status}
                   </Badge>
                 </div>
@@ -232,13 +231,13 @@ export default function HomePage() {
       <section className="py-20" id="how-it-works">
         <div className="container">
           <div className="text-center mb-12 flex flex-col items-center gap-4 animate-fade-in-up">
-            <Badge variant="info">Planned Workflow</Badge>
+            <Badge variant="info">Interactive AR Workflow</Badge>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
-              How It Will Work
+              How It Works
             </h2>
             <p className="text-base text-neutral-600 dark:text-neutral-400 max-w-[600px] leading-relaxed">
-              The intended AR experience follows these steps. These are planned
-              features, not yet implemented.
+              Transform any table or flat surface into a live augmented reality network
+              engineering sandbox in four simple steps.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -273,8 +272,8 @@ export default function HomePage() {
               Ready to Explore?
             </h2>
             <p className="text-base text-neutral-600 dark:text-neutral-400 max-w-[440px]">
-              Visit the AR Lab to see the workspace foundation. Full AR
-              functionality will be available in upcoming phases.
+              Launch the AR Lab to place network devices, establish topologies,
+              calculate shortest paths, and simulate packet traversal on your tabletop.
             </p>
             <Link to="/ar-lab">
               <Button

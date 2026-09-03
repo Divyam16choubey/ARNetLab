@@ -100,6 +100,19 @@ export function createDeviceMesh(type) {
   destRing.visible = false;
   group.add(destRing);
 
+  // 4. Generous invisible hit volume for reliable touch raycasting on mobile/tablets
+  const hitGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.07, 16);
+  const hitMat = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+  });
+  const hitTarget = new THREE.Mesh(hitGeo, hitMat);
+  hitTarget.name = 'hitTarget';
+  hitTarget.userData.isHitTarget = true;
+  hitTarget.position.y = 0.035;
+  group.add(hitTarget);
+
   return group;
 }
 

@@ -12,8 +12,8 @@ import { useAR } from '../../hooks/useAR';
 
 /**
  * Route calculation & virtual packet simulation panel.
- * Phase 4: Displays real-time Dijkstra shortest path calculation results.
- * Phase 5: Virtual packet dispatch, edge-by-edge traversal status, and simulation timing.
+ * Displays real-time Dijkstra shortest path calculation results,
+ * virtual packet dispatch, edge-by-edge traversal status, and simulation timing.
  */
 export default function RouteStatus() {
   const {
@@ -130,7 +130,7 @@ export default function RouteStatus() {
             </div>
           </div>
 
-          {/* Virtual Packet Simulation Controls (Phase 5) */}
+          {/* Virtual Packet Simulation Controls */}
           <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
@@ -210,8 +210,8 @@ export default function RouteStatus() {
           <Route size={16} className="text-primary-500" />
           <span className="text-sm font-bold">Route &amp; Simulation</span>
         </div>
-        <span className="text-[10px] uppercase tracking-wider font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 py-0.5 px-2 rounded-full border border-amber-500/20">
-          Phase 5
+        <span className="text-[10px] uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 py-0.5 px-2 rounded-full border border-emerald-500/20">
+          Dijkstra Engine
         </span>
       </div>
 

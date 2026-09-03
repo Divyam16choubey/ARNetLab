@@ -45,7 +45,7 @@ export function ARProvider({ children }) {
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [selectedDeviceType, setSelectedDeviceType] = useState(NODE_TYPES.PC);
 
-  // ---- Phase 4: Interaction Modes & Routing State ----
+  // ---- Interaction Modes & Routing State ----
   const [activeMode, setActiveModeState] = useState(/** @type {InteractionMode} */ ('place'));
   const [connectSourceNodeId, setConnectSourceNodeId] = useState(null);
   const [sourceNodeId, setSourceNodeId] = useState(null);
@@ -53,7 +53,7 @@ export function ARProvider({ children }) {
   const [route, setRoute] = useState(null);
   const [statusMessage, setStatusMessage] = useState(null);
 
-  // ---- Phase 5: Virtual Packet Simulation State ----
+  // ---- Virtual Packet Simulation State ----
   const [simulationStatus, setSimulationStatus] = useState(/** @type {SimStatus} */ (SIMULATION_STATUS.IDLE));
   const [packetInfo, setPacketInfo] = useState({
     packetId: null,
@@ -113,6 +113,10 @@ export function ARProvider({ children }) {
   // Track hit-test state changes without React re-render per frame
   const hitTestReadyRef = useRef(false);
   const hitTestIntervalRef = useRef(null);
+
+  // Input debouncing & reference to tap handler for WebXR events
+  const lastTapTimestampRef = useRef(0);
+  const onTapRef = useRef(null);
 
   // Initialize PacketSimulator with discrete milestone callbacks
   useEffect(() => {
@@ -335,6 +339,11 @@ export function ARProvider({ children }) {
             const res = sim.update(dt, graphRef.current, (id) => deviceManager.getNodePosition(id));
             mesh.setPosition(res.position.x, res.position.y, res.position.z);
             mesh.animate(now * 0.001);
+          }
+        },
+        onSelect: () => {
+          if (onTapRef.current) {
+            onTapRef.current();
           }
         },
         onSessionEnd: () => {
@@ -716,6 +725,13 @@ export function ARProvider({ children }) {
 
   // ---- Tap handler (handles workspace placement, device selection, connections, routing picks) ----
   const onTap = useCallback((screenX, screenY) => {
+    // 1. Debounce rapid duplicate taps (e.g. concurrent DOM pointer event and WebXR select event)
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (now - lastTapTimestampRef.current < 250) {
+      return;
+    }
+    lastTapTimestampRef.current = now;
+
     const arManager = arManagerRef.current;
     const hitTestManager = hitTestManagerRef.current;
     const placementManager = placementManagerRef.current;
@@ -737,18 +753,36 @@ export function ARProvider({ children }) {
     }
 
     // Case 2: Workspace already placed -> Check for interaction based on activeMode
-    const ndcX =
+    const targetX =
       screenX !== undefined
-        ? (screenX / window.innerWidth) * 2 - 1
-        : 0;
-    const ndcY =
-      screenY !== undefined
-        ? -(screenY / window.innerHeight) * 2 + 1
+        ? screenX
+        : typeof window !== 'undefined' && window.__lastPointerX !== undefined
+        ? window.__lastPointerX
+        : typeof window !== 'undefined'
+        ? window.innerWidth / 2
         : 0;
 
-    const activeCamera = arManager.renderer?.xr?.isPresenting
-      ? arManager.renderer.xr.getCamera()
-      : arManager.camera;
+    const targetY =
+      screenY !== undefined
+        ? screenY
+        : typeof window !== 'undefined' && window.__lastPointerY !== undefined
+        ? window.__lastPointerY
+        : typeof window !== 'undefined'
+        ? window.innerHeight / 2
+        : 0;
+
+    const width = typeof window !== 'undefined' && window.innerWidth ? window.innerWidth : 1;
+    const height = typeof window !== 'undefined' && window.innerHeight ? window.innerHeight : 1;
+
+    const ndcX = (targetX / width) * 2 - 1;
+    const ndcY = -(targetY / height) * 2 + 1;
+
+    // In Three.js WebXR, getCamera() returns an ArrayCamera. Use the active perspective sub-camera for raycasting.
+    let activeCamera = arManager.camera;
+    if (arManager.renderer?.xr?.isPresenting) {
+      const xrCam = arManager.renderer.xr.getCamera();
+      activeCamera = xrCam?.cameras && xrCam.cameras.length > 0 ? xrCam.cameras[0] : xrCam;
+    }
 
     // Raycast against existing devices
     const hitNodeId = deviceManager.getDeviceAtScreenPoint(
@@ -873,6 +907,7 @@ export function ARProvider({ children }) {
       setStatusMessage('Device deselected.');
     }
   }, [createConnection, setSourceNode, setDestinationNode]);
+  onTapRef.current = onTap;
 
   // ---- Send Virtual Packet ----
   const sendPacket = useCallback(() => {
@@ -1203,13 +1238,13 @@ export function ARProvider({ children }) {
     selectedNodeId,
     selectedEdgeId,
     selectedDeviceType,
-    // Phase 4: Interaction Modes & Routing
+    // Interaction Modes & Routing
     activeMode,
     connectSourceNodeId,
     sourceNodeId,
     destinationNodeId,
     route,
-    // Phase 5: Virtual Packet Simulation
+    // Virtual Packet Simulation
     simulationStatus,
     packetInfo,
     sendPacket,

@@ -3,8 +3,7 @@ import { useAR } from '../../hooks/useAR';
 
 /**
  * Side panel controls for network operations.
- * Phase 4: Interactive connection, source, and destination selection.
- * Phase 5: Virtual packet dispatch and traversal control.
+ * Interactive connection, source/destination selection, and virtual packet simulation.
  */
 export default function NetworkControls() {
   const {
@@ -31,7 +30,7 @@ export default function NetworkControls() {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-3">
-        Network Controls (Phase 4)
+        Network Controls
       </p>
       <div className="flex flex-col gap-2">
         {/* Connect Nodes */}
@@ -171,11 +170,11 @@ export default function NetworkControls() {
           )}
         </div>
 
-        {/* Phase 5: Virtual Packet Simulation Trigger */}
+        {/* Virtual Packet Simulation Controls */}
         <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-2 flex items-center gap-1.5">
             <Zap size={13} className="text-amber-500" />
-            <span>Virtual Packet Simulation (Phase 5)</span>
+            <span>Packet Simulation</span>
           </p>
           <div className="flex items-center gap-2">
             {!isRunning ? (
